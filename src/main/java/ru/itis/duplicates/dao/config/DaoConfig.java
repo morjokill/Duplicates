@@ -4,6 +4,7 @@ import org.springframework.jdbc.datasource.SimpleDriverDataSource;
 
 import javax.sql.DataSource;
 
+//TODO: сделать таблицу site
 public class DaoConfig {
     private static final String DATABASE_URL = "jdbc:postgresql://localhost:5432/duplicates";
     private static final String DATABASE_USER = "duplicates_user";
