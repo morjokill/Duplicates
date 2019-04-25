@@ -1,10 +1,18 @@
 package ru.itis.duplicates.dao;
 
+import ru.itis.duplicates.model.Article;
 import ru.itis.duplicates.model.ArticleWord;
+import ru.itis.duplicates.model.Word;
 
 import java.util.List;
 import java.util.Map;
 
 public interface Dao {
-    Map<String, List<ArticleWord>> mapWordsWithArticles(List<String> words);
+    int getArticlesCount();
+
+    void saveArticle(Article article);
+
+    void saveWords(List<Word> saveWords);
+
+    void saveArticleWords(List<ArticleWord> saveArticleWords);
 }

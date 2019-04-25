@@ -5,11 +5,19 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import java.sql.Timestamp;
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
 @ToString
 public class Word {
-    private int id;
     private String value;
+    private int articlesWithWordCount;
+    private double wordSumFreq;
+
+    public Word(String value, double wordSumFreq) {
+        this.value = value;
+        this.wordSumFreq = wordSumFreq;
+    }
 }

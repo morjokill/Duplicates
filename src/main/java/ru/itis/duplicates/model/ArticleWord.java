@@ -10,8 +10,16 @@ import lombok.ToString;
 @Data
 @ToString
 public class ArticleWord {
-    private Word word;
-    private Article article;
-    private int count;
+    private String article;
+    private String word;
+    private double freq;
+    private double tf;
     private double weight;
+
+    public ArticleWord(String article, String word, double freq, double tf) {
+        this.article = article;
+        this.word = word;
+        this.freq = freq;
+        this.tf = tf;
+    }
 }

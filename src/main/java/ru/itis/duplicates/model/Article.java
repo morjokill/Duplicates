@@ -10,7 +10,14 @@ import lombok.ToString;
 @Data
 @ToString
 public class Article {
-    private int id;
     private String url;
+    private String library;
     private String text;
+    private long wordsCount;
+
+    public Article(String url, String library, String text) {
+        this.url = url;
+        this.library = library;
+        this.text = text;
+    }
 }

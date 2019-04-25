@@ -9,21 +9,30 @@ GRANT ALL PRIVILEGES ON DATABASE duplicates TO duplicates_user;
 DROP TABLE IF EXISTS article_word;
 DROP TABLE IF EXISTS article;
 DROP TABLE IF EXISTS word;
+DROP TABLE IF EXISTS library;
+
+CREATE TABLE library(
+  url VARCHAR(255) PRIMARY KEY,
+  last_time_parsed TIMESTAMP
+);
 
 CREATE TABLE article(
-  id SERIAL PRIMARY KEY,
-  url VARCHAR(255),
-  text TEXT
+  url VARCHAR(255) PRIMARY KEY,
+  library VARCHAR(255) REFERENCES library (url),
+  text TEXT,
+  words_count BIGINT
 );
 
 CREATE TABLE word(
-  id SERIAL PRIMARY KEY,
-  value VARCHAR(255)
-)
+  value VARCHAR(255) PRIMARY KEY,
+  articles_with_word_count INTEGER DEFAULT 1,
+  word_sum_freq DOUBLE PRECISION
+);
 
 CREATE TABLE article_word(
-  article_id INTEGER REFERENCES article (id),
-  word_id INTEGER REFERENCES word (id),
-  count INTEGER,
+  article VARCHAR(255) REFERENCES article (url),
+  word VARCHAR(255) REFERENCES word (value),
+  freq DOUBLE PRECISION,
+  tf DOUBLE PRECISION,
   weight DOUBLE PRECISION
-)
+);
