@@ -129,29 +129,6 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         return words.stream().filter(s -> s.length() > minWordsSize).collect(Collectors.toList());
     }
 
-    private static List<String> getAllLinksFromUrl(String url) throws IOException {
-        List<String> links = new LinkedList<>();
-        Document doc = Jsoup.connect(url).get();
-
-        Elements hrefElements = doc.select("a[href]");
-        for (Element href : hrefElements) {
-            String link = href.attr("href");
-            System.out.println("href : " + link);
-            links.add(link);
-        }
-
-        return links;
-    }
-
-    private static List<String> filterLinksToOnlyOwn(List<String> links, String url) {
-        return links.stream().filter(s -> s.contains(url)).collect(Collectors.toList());
-    }
-
-    private static String getRootUrl(String link) throws MalformedURLException {
-        URL url = new URL(link);
-        return url.getProtocol() + "://" + url.getHost();
-    }
-
     private static String getTextFromUrl(String url) throws IOException {
         Document doc = Jsoup.connect(url).get();
         return doc.body().text();
