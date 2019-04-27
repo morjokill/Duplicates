@@ -1,10 +1,9 @@
 package ru.itis.duplicates.util;
 
 import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class Utils {
     public static double calculateWeight(double tf, double rIdf) {
@@ -43,9 +42,9 @@ public class Utils {
         return 0;
     }
 
-    public static List<String> readFile(String file) throws IOException {
-        List<String> lines = new LinkedList<>();
-        try (BufferedReader bufferedReader = new BufferedReader(new java.io.FileReader(file))) {
+    public static Set<String> readFile(String file) throws IOException {
+        Set<String> lines = new HashSet<>();
+        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(file))) {
             String line;
             while (Objects.nonNull(line = bufferedReader.readLine())) {
                 lines.add(line);

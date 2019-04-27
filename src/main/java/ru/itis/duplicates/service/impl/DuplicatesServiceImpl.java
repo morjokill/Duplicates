@@ -1,6 +1,10 @@
 package ru.itis.duplicates.service.impl;
 
 import org.apache.logging.log4j.util.Strings;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 import ru.itis.duplicates.app.Application;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.impl.DaoImpl;
@@ -16,6 +20,8 @@ import scala.Option;
 import scala.collection.JavaConversions;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -110,16 +116,48 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         return stemmedWords;
     }
 
-    private static List<String> getStopWords() throws IOException {
+    private static Set<String> getStopWords() throws IOException {
         return Utils.readFile(stopWordsFilePath);
     }
 
-    private static List<String> removeStopWordsFromWordsList(List<String> wordsList, List<String> stopWords) {
+    private static List<String> removeStopWordsFromWordsList(List<String> wordsList, Set<String> stopWords) {
         wordsList.removeAll(stopWords);
         return wordsList;
     }
 
     private static List<String> removeShortWords(List<String> words, int minWordsSize) {
         return words.stream().filter(s -> s.length() > minWordsSize).collect(Collectors.toList());
+    }
+
+    private static List<String> getAllLinksFromUrl(String url) throws IOException {
+        List<String> links = new LinkedList<>();
+        Document doc = Jsoup.connect(url).get();
+
+        Elements hrefElements = doc.select("a[href]");
+        for (Element href : hrefElements) {
+            String link = href.attr("href");
+            System.out.println("href : " + link);
+            links.add(link);
+        }
+
+        return links;
+    }
+
+    private static List<String> filterLinksToOnlyOwn(List<String> links, String url) {
+        return links.stream().filter(s -> s.contains(url)).collect(Collectors.toList());
+    }
+
+    private static String getRootUrl(String link) throws MalformedURLException {
+        URL url = new URL(link);
+        return url.getProtocol() + "://" + url.getHost();
+    }
+
+    private static String getTextFromUrl(String url) throws IOException {
+        Document doc = Jsoup.connect(url).get();
+        return doc.body().text();
+    }
+
+    public static void main(String[] args) {
+        String url = "https://habr.com/ru/top/";
     }
 }
