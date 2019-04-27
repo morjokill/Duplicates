@@ -12,14 +12,14 @@ import lombok.ToString;
 public class ArticleWord {
     private String article;
     private String word;
-    private double freq;
+    private int count;
     private double tf;
     private double weight;
 
-    public ArticleWord(String article, String word, double freq, double tf) {
+    public ArticleWord(String article, String word, int count, double tf) {
         this.article = article;
         this.word = word;
-        this.freq = freq;
+        this.count = count;
         this.tf = tf;
     }
 }

@@ -30,20 +30,24 @@ public class DuplicatesServiceImpl implements DuplicatesService {
 
         article.setWordsCount(wordsCount);
         dao.saveArticle(article);
+        dao.updateLibraryWordsCount(article.getLibrary(), wordsCount);
 
         List<Word> wordsToSave = new LinkedList<>();
         List<ArticleWord> articleWordsToSave = new LinkedList<>();
         for (String word : mapOfWordsCountForDocument.keySet()) {
-            double freq = Utils.calculateFrequency(mapOfWordsCountForDocument.get(word), wordsCount);
+            Integer wordCount = mapOfWordsCountForDocument.get(word);
+            double freq = Utils.calculateFrequency(wordCount, wordsCount);
             double tf = Utils.calculateTf(freq, maxFreq);
 
             wordsToSave.add(new Word(word, freq));
-            articleWordsToSave.add(new ArticleWord(articleUrl, word, freq, tf));
+            articleWordsToSave.add(new ArticleWord(articleUrl, word, wordCount, tf));
             System.out.println("'" + word + "'. freq: " + freq + ". tf:" + tf);
         }
 
         dao.saveWords(wordsToSave);
         dao.saveArticleWords(articleWordsToSave);
+
+        dao.recalculateWeight();
     }
 
     private static Map<String, Integer> calculateWordsCount(List<String> words) {
@@ -60,26 +64,5 @@ public class DuplicatesServiceImpl implements DuplicatesService {
             return max.isPresent() ? (double) max.getAsInt() / allWordsCount : 0;
         }
         return 0;
-    }
-
-    public static void main(String[] args) {
-        String parseString = "Краткое теоретическое введение Основная\n" +
-                "идея     состоит в сравнении\n" +
-                "двух способов подсчета количества информации в\n" +
-                "смысле определения К Шеннона содержащейся в\n" +
-                "сообщении о том что данное слово входит в\n" +
-                "некоторый документ по меньшей мере один раз\n" +
-                "Первый способ статистический это обычный  \n" +
-                "   Второй способ теоретический основан\n" +
-                "на модели распределения Пуассона\n" +
-                "предполагающей что слова в коллекции\n" +
-                "документов распределяются случайным и\n" +
-                "независимым образом равномерно рассеиваясь с\n" +
-                "некоторой средней плотностью ".trim();
-        List<String> words = Arrays.asList(parseString.split(" "));
-        DuplicatesServiceImpl duplicatesService = new DuplicatesServiceImpl();
-        duplicatesService.saveArticle(words,
-                new Article("megalib.com/article/1", "megalib.com", parseString));
-
     }
 }

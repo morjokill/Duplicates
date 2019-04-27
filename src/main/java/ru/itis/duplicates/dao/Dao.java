@@ -5,7 +5,6 @@ import ru.itis.duplicates.model.ArticleWord;
 import ru.itis.duplicates.model.Word;
 
 import java.util.List;
-import java.util.Map;
 
 public interface Dao {
     int getArticlesCount();
@@ -15,4 +14,8 @@ public interface Dao {
     void saveWords(List<Word> saveWords);
 
     void saveArticleWords(List<ArticleWord> saveArticleWords);
+
+    void updateLibraryWordsCount(String library, long plusWords);
+
+    void recalculateWeight();
 }

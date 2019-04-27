@@ -14,4 +14,5 @@ import java.sql.Timestamp;
 public class Library {
     private String url;
     private Timestamp lastTimeParsed;
+    private long wordsCount;
 }

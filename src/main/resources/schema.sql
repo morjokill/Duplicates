@@ -13,7 +13,8 @@ DROP TABLE IF EXISTS library;
 
 CREATE TABLE library(
   url VARCHAR(255) PRIMARY KEY,
-  last_time_parsed TIMESTAMP
+  last_time_parsed TIMESTAMP,
+  words_count BIGINT DEFAULT 0
 );
 
 CREATE TABLE article(
@@ -25,14 +26,13 @@ CREATE TABLE article(
 
 CREATE TABLE word(
   value VARCHAR(255) PRIMARY KEY,
-  articles_with_word_count INTEGER DEFAULT 1,
-  word_sum_freq DOUBLE PRECISION
+  articles_with_word_count INTEGER DEFAULT 1
 );
 
 CREATE TABLE article_word(
   article VARCHAR(255) REFERENCES article (url),
   word VARCHAR(255) REFERENCES word (value),
-  freq DOUBLE PRECISION,
+  count INTEGER,
   tf DOUBLE PRECISION,
   weight DOUBLE PRECISION
 );

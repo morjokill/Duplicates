@@ -23,12 +23,21 @@ public class DaoImpl implements Dao {
     private static final String SQL_ARTICLES_COUNT = "SELECT count(*) FROM article;";
     private static final String SQL_SAVE_ARTICLE = "INSERT INTO article (url, library, text, words_count)" +
             " VALUES (?, ?, ?, ?);";
-    private static final String SQL_SAVE_WORD = "INSERT INTO word (value, word_sum_freq) " +
-            "VALUES (?, ?) ON CONFLICT (VALUE) DO UPDATE " +
-            "SET articles_with_word_count = word.articles_with_word_count + 1," +
-            "  word_sum_freq = word.word_sum_freq + ?;";
-    private static final String SQL_SAVE_ARTICLE_WORD = "INSERT INTO article_word (article, word, freq, tf) " +
+    private static final String SQL_SAVE_WORD = "INSERT INTO word (value) " +
+            "VALUES (?) ON CONFLICT (VALUE) DO UPDATE " +
+            "SET articles_with_word_count = word.articles_with_word_count + 1;";
+    private static final String SQL_SAVE_ARTICLE_WORD = "INSERT INTO article_word (article, word, count, tf) " +
             "VALUES (?, ?, ?, ?);";
+    private static final String SQL_UPDATE_LIBRARY_WORDS_COUNT = "UPDATE library SET words_count = words_count + ?" +
+            " WHERE library.url = ?;";
+    private static final String SQL_RECALCULATE_WEIGHT = "UPDATE article_word\n" +
+            "SET weight = (log(sub.art_count::DOUBLE PRECISION / (SELECT count(*) FROM article WHERE library = sub.library)) * -1\n" +
+            "+ (log(1 - exp(-1 * (SELECT sum(count) FROM article_word INNER JOIN article a on article_word.article = a.url\n" +
+            "INNER JOIN library l on a.library = l.url WHERE article_word.word = sub.word AND l.url = sub.library)::DOUBLE PRECISION\n" +
+            "/ (SELECT count(*) FROM article WHERE library = sub.library))))) * sub.tf FROM\n" +
+            "(SELECT word, count, tf, articles_with_word_count as art_count, library FROM article_word\n" +
+            "INNER JOIN word w2 on article_word.word = w2.value INNER JOIN article a on article_word.article = a.url) as sub\n" +
+            "WHERE sub.word = article_word.word;";
 
     public DaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -60,8 +69,6 @@ public class DaoImpl implements Dao {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 Word word = saveWords.get(i);
                 ps.setString(1, word.getValue());
-                ps.setDouble(2, word.getWordSumFreq());
-                ps.setDouble(3, word.getWordSumFreq());
             }
 
             @Override
@@ -79,7 +86,7 @@ public class DaoImpl implements Dao {
                 ArticleWord articleWord = saveArticleWords.get(i);
                 ps.setString(1, articleWord.getArticle());
                 ps.setString(2, articleWord.getWord());
-                ps.setDouble(3, articleWord.getFreq());
+                ps.setInt(3, articleWord.getCount());
                 ps.setDouble(4, articleWord.getTf());
             }
 
@@ -88,5 +95,16 @@ public class DaoImpl implements Dao {
                 return saveArticleWords.size();
             }
         });
+    }
+
+    @Override
+    public void updateLibraryWordsCount(String library, long plusWords) {
+        jdbcTemplate.update(SQL_UPDATE_LIBRARY_WORDS_COUNT, new Object[]{plusWords, library},
+                new int[]{Types.BIGINT, Types.VARCHAR});
+    }
+
+    @Override
+    public void recalculateWeight() {
+        jdbcTemplate.update(SQL_RECALCULATE_WEIGHT);
     }
 }
