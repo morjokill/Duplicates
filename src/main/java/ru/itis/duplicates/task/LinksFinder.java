@@ -34,7 +34,8 @@ public class LinksFinder {
     }
 
     //TODO: когда останавливаться?
-    public void getAllLinksFromSite() throws IOException, InterruptedException {
+    //TODO: при добавлении ссылки нужна проверка на доступность
+    public void getAllLinksFromSite() throws InterruptedException {
         links.put(url, LinkStatus.NEW);
 
         executorService.execute(new LinksFindTask(url));
@@ -45,13 +46,7 @@ public class LinksFinder {
     }
 
     private enum LinkStatus {
-        NEW(0), RESERVED(1), PARSED(2), FAILED(3);
-
-        private int value;
-
-        LinkStatus(int value) {
-            this.value = value;
-        }
+        NEW, RESERVED, PARSED, FAILED
     }
 
     public class LinksFindTask implements Runnable {
