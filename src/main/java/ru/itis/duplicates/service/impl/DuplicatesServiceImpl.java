@@ -1,5 +1,7 @@
 package ru.itis.duplicates.service.impl;
 
+import org.apache.logging.log4j.util.Strings;
+import ru.itis.duplicates.app.Application;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.impl.DaoImpl;
 import ru.itis.duplicates.model.Article;
@@ -7,10 +9,20 @@ import ru.itis.duplicates.model.ArticleWord;
 import ru.itis.duplicates.model.Word;
 import ru.itis.duplicates.service.DuplicatesService;
 import ru.itis.duplicates.util.Utils;
+import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
+import ru.stachek66.nlp.mystem.holding.Request;
+import ru.stachek66.nlp.mystem.model.Info;
+import scala.Option;
+import scala.collection.JavaConversions;
 
+import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DuplicatesServiceImpl implements DuplicatesService {
+    private final static String stopWordsFilePath = "src\\main\\resources\\stop_words.txt";
+    private static final int MIN_WORDS_SIZE = 3;
+
     private Dao dao;
 
     public DuplicatesServiceImpl(Dao dao) {
@@ -64,5 +76,50 @@ public class DuplicatesServiceImpl implements DuplicatesService {
             return max.isPresent() ? (double) max.getAsInt() / allWordsCount : 0;
         }
         return 0;
+    }
+
+    public static List<String> parseText(String text) throws MyStemApplicationException, IOException {
+        List<String> resultList = new LinkedList<>();
+
+        if (!Strings.isEmpty(text)) {
+            List<String> stemmedWords = stemLine(text);
+            resultList = removeStopWordsFromWordsList(stemmedWords, getStopWords());
+            resultList = removeShortWords(resultList, MIN_WORDS_SIZE);
+
+            return resultList;
+        }
+        return resultList;
+    }
+
+    private static List<String> stemLine(String line) throws MyStemApplicationException {
+        List<String> stemmedWords = new LinkedList<>();
+        final Iterable<Info> result =
+                JavaConversions.asJavaIterable(
+                        Application.getMyStemAnalyzer()
+                                .analyze(Request.apply(line))
+                                .info()
+                                .toIterable());
+
+        for (final Info info : result) {
+            Option<String> lex = info.lex();
+            if (Objects.nonNull(lex) && lex.isDefined()) {
+                stemmedWords.add(lex.get());
+            }
+        }
+
+        return stemmedWords;
+    }
+
+    private static List<String> getStopWords() throws IOException {
+        return Utils.readFile(stopWordsFilePath);
+    }
+
+    private static List<String> removeStopWordsFromWordsList(List<String> wordsList, List<String> stopWords) {
+        wordsList.removeAll(stopWords);
+        return wordsList;
+    }
+
+    private static List<String> removeShortWords(List<String> words, int minWordsSize) {
+        return words.stream().filter(s -> s.length() > minWordsSize).collect(Collectors.toList());
     }
 }
