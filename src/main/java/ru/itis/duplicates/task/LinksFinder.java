@@ -35,6 +35,7 @@ public class LinksFinder {
 
     //TODO: когда останавливаться?
     //TODO: при добавлении ссылки нужна проверка на доступность
+    //TODO: зачем 2 скачивать страницу? 1 раз скачивать надо и в 2 потока обрабатывать. 2 раза скачивать - хуйня
     public void getAllLinksFromSite() throws InterruptedException {
         links.put(url, LinkStatus.NEW);
 
@@ -45,6 +46,7 @@ public class LinksFinder {
         }
     }
 
+    //TODO: больше статусов с ними будет работать и парсер и коллектор. добавить коллектед?
     private enum LinkStatus {
         NEW, RESERVED, PARSED, FAILED
     }
@@ -56,6 +58,7 @@ public class LinksFinder {
             this.link = link;
         }
 
+        //todo: надо писать в бд со статусом
         //TODO: как-то сохранять состояние, иначе все если рухнет, то все гг
         //TODO: ввести уточнение? DA
         //TODO: можно остановить в любой момент и все добавиться!
