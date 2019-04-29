@@ -48,6 +48,8 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         dao.saveArticleWords(articleWordsToSave);
 
         //TODO: РАБОТАЕТ, НО ПИЗДЕЦ ДОЛГО
+        //TODO: выполнять только 1 раз надо, а не для каждой статьи,
+        // ибо лок и долго, либо же пофискить, чтобы быстрее было
         dao.recalculateWeight();
     }
 

@@ -30,8 +30,8 @@ CREATE TABLE word(
 );
 
 CREATE TABLE article_word(
-  article VARCHAR(255) REFERENCES article (url),
-  word VARCHAR(255) REFERENCES word (value),
+  article VARCHAR(255),
+  word VARCHAR(255),
   count INTEGER,
   tf DOUBLE PRECISION,
   weight DOUBLE PRECISION
