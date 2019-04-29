@@ -103,8 +103,22 @@ public class DaoImpl implements Dao {
                 new int[]{Types.BIGINT, Types.VARCHAR});
     }
 
+    //TODO: сделать через инсерт в темп таблицу
+    /*https://stackoverflow.com/questions/3361291/slow-simple-update-query-on-postgresql-database-with-3-million-rows*/
+    /*https://stackoverflow.com/questions/3100072/postgresql-slow-on-a-large-table-with-arrays-and-lots-of-updates/3100232#3100232*/
+    /*https://web.archive.org/web/20120229084713/http://pgsql.tapoueh.org/site/html/misc/hot.html*/
+    /*Today I've spent many hours with similar issue. I've found a solution: drop all the constraints/indices before
+    the update. No matter whether the column being updated is indexed or not, it seems like psql updates all
+    the indices for all the updated rows. After the update is finished, add the constraints/indices back.*/
+    /*CREATE TEMP TABLE tempTable (id BIGINT NOT NULL, field(s) to be updated,
+CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
     @Override
     public void recalculateWeight() {
         jdbcTemplate.update(SQL_RECALCULATE_WEIGHT);
+    }
+
+    public static void main(String[] args) {
+        Dao da = new DaoImpl();
+        da.recalculateWeight();
     }
 }
