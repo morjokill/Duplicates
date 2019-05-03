@@ -51,7 +51,7 @@ BEGIN
   articles := ARRAY(SELECT url::VARCHAR FROM article a WHERE a.library = in_library);
   articles_count := array_upper(articles, 1);
 
-  DROP TABLE IF EXISTS temp_table;
+  TRUNCATE temp_table;
   CREATE TEMP TABLE IF NOT EXISTS
     temp_table (word VARCHAR(255), article VARCHAR(255), weight DOUBLE PRECISION);
 
