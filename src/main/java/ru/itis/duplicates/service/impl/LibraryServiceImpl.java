@@ -59,7 +59,7 @@ public class LibraryServiceImpl implements LibraryService {
             //TODO: РАБОТАЕТ, НО ПИЗДЕЦ ДОЛГО
             //TODO: выполнять только 1 раз надо, а не для каждой статьи,
             // ибо лок и долго, либо же пофискить, чтобы быстрее было
-            dao.recalculateWeight();
+            dao.recalculateWeight(rootUrl);
 
         } catch (Exception e) {
             System.out.println("links finder gg: " + e);

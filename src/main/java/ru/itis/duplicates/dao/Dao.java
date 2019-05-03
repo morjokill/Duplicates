@@ -18,7 +18,7 @@ public interface Dao {
 
     void updateLibraryWordsCount(String libraryUrl, long plusWords);
 
-    void recalculateWeight();
+    void recalculateWeight(String libraryUrl);
 
     Boolean isLibraryExists(String libraryUrl);
 
@@ -29,4 +29,6 @@ public interface Dao {
     Boolean isArticleExists(String articleUrl);
 
     List<String> getArticlesFromLibrary(String libraryUrl);
+
+    void vacuumWordArticleTable();
 }

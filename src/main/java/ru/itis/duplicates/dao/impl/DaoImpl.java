@@ -2,7 +2,12 @@ package ru.itis.duplicates.dao.impl;
 
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.SqlOutParameter;
+import org.springframework.jdbc.core.SqlParameter;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.config.DaoConfig;
 import ru.itis.duplicates.model.Article;
@@ -15,6 +20,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
+import java.util.Map;
 
 public class DaoImpl implements Dao {
     private JdbcTemplate jdbcTemplate;
@@ -33,14 +39,6 @@ public class DaoImpl implements Dao {
     private static final String SQL_UPDATE_LIBRARY_WORDS_COUNT = "UPDATE library SET words_count = words_count + ?" +
             " WHERE library.url = ?;";
     //TODO: добавить условие library
-    private static final String SQL_RECALCULATE_WEIGHT = "UPDATE article_word " +
-            "SET weight = (log(sub.art_count::DOUBLE PRECISION / (SELECT count(*) FROM article WHERE library = sub.library)) * -1 " +
-            "+ (log(1 - exp(-1 * (SELECT sum(count) FROM article_word INNER JOIN article a on article_word.article = a.url " +
-            "INNER JOIN library l on a.library = l.url WHERE article_word.word = sub.word AND l.url = sub.library)::DOUBLE PRECISION " +
-            "/ (SELECT count(*) FROM article WHERE library = sub.library))))) * sub.tf FROM " +
-            "(SELECT word, count, tf, articles_with_word_count as art_count, library FROM article_word " +
-            "INNER JOIN word w2 on article_word.word = w2.value INNER JOIN article a on article_word.article = a.url) as sub " +
-            "WHERE sub.word = article_word.word;";
     private static final String SQL_SAVE_LIBRARY = "INSERT INTO library (url) " +
             "VALUES (?);";
     private static final String SQL_UPDATE_LIBRARY_LAST_PARSED = "UPDATE library SET last_time_parsed = ? " +
@@ -48,16 +46,25 @@ public class DaoImpl implements Dao {
     private static final String SQL_SELECT_LIBRARY_EXISTS = "SELECT EXISTS(SELECT 1 FROM library WHERE url = ?);";
     private static final String SQL_SELECT_ARTICLE_EXISTS = "SELECT EXISTS(SELECT 1 FROM article WHERE url = ?);";
     private static final String SQL_ARTICLES_FROM_LIBRARY = "SELECT url FROM article WHERE library = ?;";
+    private static final String SQL_VACUUM_WORD_ARTICLE_TABLE = "VACUUM FULL ANALYZE article_word;";
+    private final SimpleJdbcCall recalculateWeightCall;
+
 
     public DaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.namedJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+        recalculateWeightCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("recalculate_weight")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(new SqlParameter("in_library", Types.VARCHAR), new SqlOutParameter("recalculate_weight", Types.INTEGER));
     }
 
     public DaoImpl() {
         DataSource dataSource = DaoConfig.getDataSource();
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.namedJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+        recalculateWeightCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("recalculate_weight")
+                .withoutProcedureColumnMetaDataAccess()
+                .declareParameters(new SqlParameter("in_library", Types.VARCHAR), new SqlOutParameter("recalculate_weight", Types.INTEGER));
     }
 
     @Override
@@ -126,8 +133,10 @@ public class DaoImpl implements Dao {
     /*CREATE TEMP TABLE tempTable (id BIGINT NOT NULL, field(s) to be updated,
 CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
     @Override
-    public void recalculateWeight() {
-        jdbcTemplate.update(SQL_RECALCULATE_WEIGHT);
+    public void recalculateWeight(String libraryUrl) {
+        SqlParameterSource in = new MapSqlParameterSource().addValue("in_library", libraryUrl);
+        Map<String, Object> execute = recalculateWeightCall.execute(in);
+        System.out.println(execute.get("recalculate_weight"));
     }
 
     @Override
@@ -158,8 +167,8 @@ CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
                 new int[]{Types.VARCHAR}, String.class);
     }
 
-    public static void main(String[] args) {
-        Dao da = new DaoImpl();
-        System.out.println(da.getArticlesFromLibrary("https://habr.com"));
+    @Override
+    public void vacuumWordArticleTable() {
+        jdbcTemplate.update(SQL_VACUUM_WORD_ARTICLE_TABLE);
     }
 }

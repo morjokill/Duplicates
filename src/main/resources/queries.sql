@@ -42,3 +42,8 @@ FROM pg_stat_activity
 WHERE pg_stat_activity.datname = 'duplicates' -- ← change this to your DB
       AND pid <> pg_backend_pid();
 
+
+ALTER TABLE article_word SET (FILLFACTOR = 70);
+VACUUM FULL article_word;
+REINDEX TABLE article_word;
+

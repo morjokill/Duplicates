@@ -39,3 +39,32 @@ CREATE TABLE article_word(
   tf DOUBLE PRECISION,
   weight DOUBLE PRECISION
 );
+
+ALTER TABLE article_word SET (FILLFACTOR = 70);
+
+CREATE OR REPLACE FUNCTION recalculate_weight(in_library VARCHAR)
+  RETURNS INTEGER AS $$
+DECLARE
+  articles VARCHAR[];
+  articles_count INTEGER;
+BEGIN
+  articles := ARRAY(SELECT url::VARCHAR FROM article a WHERE a.library = in_library);
+  articles_count := array_upper(articles, 1);
+
+  DROP TABLE IF EXISTS temp_table;
+  CREATE TEMP TABLE IF NOT EXISTS
+    temp_table (word VARCHAR(255), article VARCHAR(255), weight DOUBLE PRECISION);
+
+  INSERT INTO temp_table(word, article, weight)
+    SELECT aw.word, aw.article, (log(w.articles_with_word_count::DOUBLE PRECISION / articles_count) * (-1) +
+                                 log(1 - exp(-1 * w.sum_count_in_collection::DOUBLE PRECISION / articles_count))) *
+                                aw.tf FROM article_word as aw
+      INNER JOIN word w on word = w.value
+    WHERE article = any (articles);
+
+  UPDATE article_word as aw SET weight = tt.weight FROM temp_table tt
+  WHERE aw.word = tt.word AND aw.article = tt.article;
+
+  RETURN articles_count;
+END; $$
+LANGUAGE 'plpgsql';
