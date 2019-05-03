@@ -9,8 +9,8 @@ import lombok.ToString;
 @AllArgsConstructor
 @Data
 @ToString
-public class Word {
-    private String value;
-    private int count;
-    private String libraryUrl;
+public class ArticleDuplicate {
+    private Article article;
+    private double similarity;
+    private boolean isDuplicate;
 }

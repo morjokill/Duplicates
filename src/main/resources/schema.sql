@@ -25,8 +25,11 @@ CREATE TABLE article(
 );
 
 CREATE TABLE word(
-  value VARCHAR(255) PRIMARY KEY,
-  articles_with_word_count INTEGER DEFAULT 1
+  value VARCHAR(255),
+  library VARCHAR(255) REFERENCES library (url),
+  sum_count_in_collection BIGINT,
+  articles_with_word_count INTEGER DEFAULT 1,
+  CONSTRAINT word_pk PRIMARY KEY (value, library)
 );
 
 CREATE TABLE article_word(

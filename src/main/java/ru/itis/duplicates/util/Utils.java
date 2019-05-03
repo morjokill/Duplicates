@@ -1,11 +1,23 @@
 package ru.itis.duplicates.util;
 
+import lombok.extern.java.Log;
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.*;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+@Log
 public class Utils {
+    private static Pattern clarificationPattern = Pattern.compile("^([\\/\\\\][-a-zA-Z0-9@:%._+~#=]{2,256}" +
+            "[\\/\\\\])|([-a-zA-Z0-9@:%._+~#=]{2,256})$");
+
     public static double calculateWeight(double tf, double rIdf) {
         return tf * rIdf;
     }
@@ -54,5 +66,26 @@ public class Utils {
             System.out.println("Error reading file: " + file + " ." + ioe);
             throw ioe;
         }
+    }
+
+    public static boolean isClarification(String clarification) {
+        Matcher matcher = clarificationPattern.matcher(clarification);
+        return matcher.matches();
+    }
+
+    public static String formatClarification(String clarification) {
+        if (!clarification.contains("/") && !clarification.contains("\\")) {
+            clarification = "/" + clarification + "/";
+        }
+        return clarification;
+    }
+
+    public static String getRootUrl(String link) throws MalformedURLException {
+        URL url = new URL(link);
+        return url.getProtocol() + "://" + url.getHost();
+    }
+
+    public static void main(String[] args) {
+        System.out.println("asd");
     }
 }

@@ -1,5 +1,6 @@
 package ru.itis.duplicates.task;
 
+import lombok.extern.java.Log;
 import org.apache.logging.log4j.util.Strings;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -7,10 +8,12 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import ru.itis.duplicates.app.Application;
 import ru.itis.duplicates.model.Article;
+import ru.itis.duplicates.model.ClarificationRange;
 import ru.itis.duplicates.model.Link;
 import ru.itis.duplicates.model.LinkStatus;
-import ru.itis.duplicates.service.DuplicatesService;
-import ru.itis.duplicates.service.impl.DuplicatesServiceImpl;
+import ru.itis.duplicates.service.ArticleService;
+import ru.itis.duplicates.service.impl.ArticleServiceImpl;
+import ru.itis.duplicates.util.Utils;
 import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
 import ru.stachek66.nlp.mystem.holding.Request;
 import ru.stachek66.nlp.mystem.model.Info;
@@ -19,33 +22,52 @@ import scala.collection.JavaConversions;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 //TODO: разнести по классам
+@Log
 public class LinksFinder {
     private String url;
     private String rootUrl;
     private List<String> clarificationList;
+    private ClarificationRange clarificationRange;
     private Map<String, Link> links;
-    private ExecutorService linkFindService;
+    private ExecutorService getHtmlService;
+    private ExecutorService findLinksService;
     private ExecutorService siteParseService;
-    private DuplicatesService duplicatesService;
+    private ArticleService articleService;
+    private Set<String> parsedLinks;
+    private Set<String> allLinks;
+    //TODO: четкая тема
+    private AtomicInteger handshake = new AtomicInteger(50);
 
-    public LinksFinder(String url, List<String> clarificationList) throws MalformedURLException {
+    //TODO: 50 вложений, чтобы найти новые?
+    //TODO: когда закончит собирать ссылки - все силы на парс
+    //TODO: написать оптимизатор, чтобы ссылки не собирал, пока парс не догонит!
+    public LinksFinder(String url, String rootUrl, List<String> clarificationList, List<String> parsedLinks) {
         this.url = url;
-        this.rootUrl = getRootUrl(url);
+        this.rootUrl = rootUrl;
         this.links = new ConcurrentHashMap<>();
         this.clarificationList = clarificationList;
         //TODO: вынести
-        this.linkFindService = Executors.newFixedThreadPool(2);
-        this.siteParseService = Executors.newFixedThreadPool(8);
+        this.getHtmlService = Executors.newFixedThreadPool(2);
+        this.findLinksService = Executors.newFixedThreadPool(1);
+        this.siteParseService = Executors.newFixedThreadPool(5);
         //TODO: DI
-        this.duplicatesService = new DuplicatesServiceImpl();
+        this.articleService = new ArticleServiceImpl();
+        this.parsedLinks = ConcurrentHashMap.newKeySet();
+        if (null != parsedLinks) {
+            this.parsedLinks.addAll(parsedLinks);
+        }
+        this.allLinks = ConcurrentHashMap.newKeySet();
+        if (null != parsedLinks) {
+            this.allLinks.addAll(parsedLinks);
+        }
     }
 
     //TODO: когда останавливаться?
@@ -53,18 +75,19 @@ public class LinksFinder {
     //TODO: зачем 2 скачивать страницу? 1 раз скачивать надо и в 2 потока обрабатывать. 2 раза скачивать - хуйня
     public void getAllLinksFromSite() throws InterruptedException {
         links.put(url, Link.getNewLink(url));
+        allLinks.add(url);
 
-        linkFindService.execute(new LinksFindTask(url));
+        getHtmlService.execute(new GetHtmlTask(url));
         while (true) {
-            System.out.println(links.size());
+            System.out.println("Parsed: " + parsedLinks.size() + " / " + allLinks.size() + " " + handshake + " " + links.size());
             Thread.sleep(500);
         }
     }
 
-    public class LinksFindTask implements Runnable {
+    public class GetHtmlTask implements Runnable {
         private String url;
 
-        LinksFindTask(String url) {
+        GetHtmlTask(String url) {
             this.url = url;
         }
 
@@ -76,55 +99,86 @@ public class LinksFinder {
         public void run() {
             if (links.size() != 0) {
                 Link link = links.get(url);
-                if (link.getStatus() == LinkStatus.NEW) {
-                    link.setStatus(LinkStatus.RESERVED);
+                if (null != link) {
+                    if (link.getStatus() == LinkStatus.NEW) {
+                        link.setStatus(LinkStatus.RESERVED);
 
-                    try {
-                        Document document = getDocumentFromUrl(url);
-                        List<String> allLinksFromSite = getAllLinksFromDocument(document);
-                        allLinksFromSite = filterLinksToOnlyOwn(allLinksFromSite, rootUrl, clarificationList);
-                        String textFromSite = getTextFromDocument(document);
-                        for (String linkFromSite : allLinksFromSite) {
-                            if (!links.containsKey(linkFromSite)) {
-                                links.put(linkFromSite, Link.getNewLink(linkFromSite));
-                                linkFindService.execute(new LinksFindTask(linkFromSite));
+                        try {
+                            Document document = getDocumentFromUrl(url);
+                            link.setHtml(document);
+
+                            link.setStatus(LinkStatus.CHECKED);
+
+                            findLinksService.execute(new FindLinksTask(link));
+                            if (null != clarificationList && clarificationList.size() != 0) {
+                                for (String clarification : clarificationList) {
+                                    if (link.getUrl().contains(clarification)) {
+                                        siteParseService.execute(new SiteParseTask(link));
+                                    }
+                                }
                             }
+                        } catch (IOException e) {
+                            System.out.println("FAILED LINK: " + url);
+                            link.setStatus(LinkStatus.FAILED);
                         }
-                        link.setText(textFromSite);
-                        link.setStatus(LinkStatus.COLLECTED);
-                        siteParseService.execute(new SiteParseTask(link, duplicatesService, rootUrl));
-                    } catch (IOException e) {
-                        link.setStatus(LinkStatus.FAILED);
                     }
                 }
             }
         }
     }
 
-    public static class SiteParseTask implements Runnable {
-        private final static String stopWordsFilePath = "src\\main\\resources\\stop_words.txt";
-        private static final int MIN_WORDS_SIZE = 3;
-        private Link link;
-        private DuplicatesService duplicatesService;
-        private String rootUrl;
+    public class FindLinksTask implements Runnable {
+        private Link site;
 
-        public SiteParseTask(Link link, DuplicatesService duplicatesService, String rootUrl) {
-            this.link = link;
-            this.duplicatesService = duplicatesService;
-            this.rootUrl = rootUrl;
+        FindLinksTask(Link site) {
+            this.site = site;
         }
 
         @Override
         public void run() {
-            if (link.getStatus() == LinkStatus.COLLECTED) {
+            if (site.getStatus() == LinkStatus.CHECKED) {
+                Document document = site.getHtml();
+                List<String> allLinksFromSite = getAllLinksFromDocument(document);
+                allLinksFromSite = filterLinksToOnlyOwn(allLinksFromSite, rootUrl, clarificationList, handshake);
+                for (String linkFromSite : allLinksFromSite) {
+                    if (!allLinks.contains(linkFromSite) || handshake.intValue() > 0) {
+                        if (allLinks.add(linkFromSite)) {
+                            handshake.decrementAndGet();
+                        }
+
+                        links.put(linkFromSite, Link.getNewLink(linkFromSite));
+                        getHtmlService.execute(new GetHtmlTask(linkFromSite));
+                    }
+                }
+                site.setStatus(LinkStatus.COLLECTED);
+            }
+        }
+    }
+
+    public class SiteParseTask implements Runnable {
+        private static final int MIN_WORDS_SIZE = 3;
+        private Link link;
+
+        public SiteParseTask(Link link) {
+            this.link = link;
+        }
+
+        @Override
+        public void run() {
+            if (link.getStatus() == LinkStatus.CHECKED && !parsedLinks.contains(link.getUrl())) {
                 try {
-                    String text = link.getText();
+                    Document document = link.getHtml();
+                    String text = getTextFromDocument(document);
                     List<String> wordsFromSite = parseText(text);
 
-                    Article article = new Article(link.getUrl(), rootUrl, text);
-                    duplicatesService.saveArticle(wordsFromSite, article);
+                    String url = link.getUrl();
+                    Article article = new Article(url, rootUrl, text);
+                    articleService.saveArticle(wordsFromSite, article);
 
                     link.setStatus(LinkStatus.PARSED);
+                    //TODO: временно
+                    links.remove(url);
+                    parsedLinks.add(url);
                 } catch (Exception e) {
                     //TODO: log?
                     link.setStatus(LinkStatus.FAILED);
@@ -132,7 +186,7 @@ public class LinksFinder {
             }
         }
 
-        private static List<String> parseText(String text) throws MyStemApplicationException, IOException {
+        private List<String> parseText(String text) throws MyStemApplicationException, IOException {
             List<String> resultList = new LinkedList<>();
 
             if (!Strings.isEmpty(text)) {
@@ -145,7 +199,7 @@ public class LinksFinder {
             return resultList;
         }
 
-        private static List<String> stemLine(String line) throws MyStemApplicationException {
+        private List<String> stemLine(String line) throws MyStemApplicationException {
             List<String> stemmedWords = new LinkedList<>();
             //TODO: тоже ток 1 раз?
             final Iterable<Info> result =
@@ -165,16 +219,16 @@ public class LinksFinder {
             return stemmedWords;
         }
 
-        private static Set<String> getStopWords() throws IOException {
+        private Set<String> getStopWords() throws IOException {
             return Application.getStopWords();
         }
 
-        private static List<String> removeStopWordsFromWordsList(List<String> wordsList, Set<String> stopWords) {
+        private List<String> removeStopWordsFromWordsList(List<String> wordsList, Set<String> stopWords) {
             wordsList.removeAll(stopWords);
             return wordsList;
         }
 
-        private static List<String> removeShortWords(List<String> words, int minWordsSize) {
+        private List<String> removeShortWords(List<String> words, int minWordsSize) {
             return words.stream().filter(s -> s.length() > minWordsSize).collect(Collectors.toList());
         }
     }
@@ -210,34 +264,26 @@ public class LinksFinder {
     }
 
     //TODO: быстрее будет регуляркой?
-    private static List<String> filterLinksToOnlyOwn(List<String> links, String url, List<String> clarificationList) {
+    private static List<String> filterLinksToOnlyOwn(List<String> links, String rootUrl, List<String> clarificationList, AtomicInteger handshake) {
         return links.stream().filter(s -> {
-            try {
-                if (s.contains(url)) {
-                    if (getRootUrl(s).equals(url)) {
+            if (s.contains(rootUrl)) {
+                try {
+                    if (Utils.getRootUrl(s).equals(rootUrl)) {
                         if (null != clarificationList && clarificationList.size() != 0) {
                             for (String clarification : clarificationList) {
-                                if (s.contains(clarification)) {
+                                if (s.contains(clarification) || handshake.intValue() > 0) {
                                     return true;
                                 }
                             }
+                        } else {
+                            return true;
                         }
                     }
+                } catch (MalformedURLException e) {
+                    System.out.println("BAD URL: " + s);
                 }
-            } catch (MalformedURLException e) {
-                return false;
             }
             return false;
         }).collect(Collectors.toList());
-    }
-
-    private static String getRootUrl(String link) throws MalformedURLException {
-        URL url = new URL(link);
-        return url.getProtocol() + "://" + url.getHost();
-    }
-
-    public static void main(String[] args) throws IOException, InterruptedException {
-        LinksFinder linksFinder = new LinksFinder("https://habr.com/ru/top/", Arrays.asList("/post/", "/company/"));
-        linksFinder.getAllLinksFromSite();
     }
 }

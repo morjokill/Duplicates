@@ -12,6 +12,7 @@ import ru.itis.duplicates.model.Word;
 import javax.sql.DataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.List;
 
@@ -23,21 +24,30 @@ public class DaoImpl implements Dao {
     private static final String SQL_ARTICLES_COUNT = "SELECT count(*) FROM article;";
     private static final String SQL_SAVE_ARTICLE = "INSERT INTO article (url, library, text, words_count)" +
             " VALUES (?, ?, ?, ?);";
-    private static final String SQL_SAVE_WORD = "INSERT INTO word (value) " +
-            "VALUES (?) ON CONFLICT (VALUE) DO UPDATE " +
-            "SET articles_with_word_count = word.articles_with_word_count + 1;";
+    private static final String SQL_SAVE_WORD = "INSERT INTO word (value, library, sum_count_in_collection) " +
+            "VALUES (?, ?, ?) ON CONFLICT ON CONSTRAINT word_pk DO " +
+            "UPDATE SET articles_with_word_count = word.articles_with_word_count + 1, " +
+            "sum_count_in_collection = word.sum_count_in_collection + ?;";
     private static final String SQL_SAVE_ARTICLE_WORD = "INSERT INTO article_word (article, word, count, tf) " +
             "VALUES (?, ?, ?, ?);";
     private static final String SQL_UPDATE_LIBRARY_WORDS_COUNT = "UPDATE library SET words_count = words_count + ?" +
             " WHERE library.url = ?;";
-    private static final String SQL_RECALCULATE_WEIGHT = "UPDATE article_word\n" +
-            "SET weight = (log(sub.art_count::DOUBLE PRECISION / (SELECT count(*) FROM article WHERE library = sub.library)) * -1\n" +
-            "+ (log(1 - exp(-1 * (SELECT sum(count) FROM article_word INNER JOIN article a on article_word.article = a.url\n" +
-            "INNER JOIN library l on a.library = l.url WHERE article_word.word = sub.word AND l.url = sub.library)::DOUBLE PRECISION\n" +
-            "/ (SELECT count(*) FROM article WHERE library = sub.library))))) * sub.tf FROM\n" +
-            "(SELECT word, count, tf, articles_with_word_count as art_count, library FROM article_word\n" +
-            "INNER JOIN word w2 on article_word.word = w2.value INNER JOIN article a on article_word.article = a.url) as sub\n" +
+    //TODO: добавить условие library
+    private static final String SQL_RECALCULATE_WEIGHT = "UPDATE article_word " +
+            "SET weight = (log(sub.art_count::DOUBLE PRECISION / (SELECT count(*) FROM article WHERE library = sub.library)) * -1 " +
+            "+ (log(1 - exp(-1 * (SELECT sum(count) FROM article_word INNER JOIN article a on article_word.article = a.url " +
+            "INNER JOIN library l on a.library = l.url WHERE article_word.word = sub.word AND l.url = sub.library)::DOUBLE PRECISION " +
+            "/ (SELECT count(*) FROM article WHERE library = sub.library))))) * sub.tf FROM " +
+            "(SELECT word, count, tf, articles_with_word_count as art_count, library FROM article_word " +
+            "INNER JOIN word w2 on article_word.word = w2.value INNER JOIN article a on article_word.article = a.url) as sub " +
             "WHERE sub.word = article_word.word;";
+    private static final String SQL_SAVE_LIBRARY = "INSERT INTO library (url) " +
+            "VALUES (?);";
+    private static final String SQL_UPDATE_LIBRARY_LAST_PARSED = "UPDATE library SET last_time_parsed = ? " +
+            "WHERE url = ?;";
+    private static final String SQL_SELECT_LIBRARY_EXISTS = "SELECT EXISTS(SELECT 1 FROM library WHERE url = ?);";
+    private static final String SQL_SELECT_ARTICLE_EXISTS = "SELECT EXISTS(SELECT 1 FROM article WHERE url = ?);";
+    private static final String SQL_ARTICLES_FROM_LIBRARY = "SELECT url FROM article WHERE library = ?;";
 
     public DaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
@@ -51,7 +61,7 @@ public class DaoImpl implements Dao {
     }
 
     @Override
-    public int getArticlesCount() {
+    public Integer getArticlesCount() {
         return jdbcTemplate.queryForObject(SQL_ARTICLES_COUNT, Integer.class);
     }
 
@@ -69,6 +79,9 @@ public class DaoImpl implements Dao {
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 Word word = saveWords.get(i);
                 ps.setString(1, word.getValue());
+                ps.setString(2, word.getLibraryUrl());
+                ps.setInt(3, word.getCount());
+                ps.setInt(4, word.getCount());
             }
 
             @Override
@@ -98,8 +111,8 @@ public class DaoImpl implements Dao {
     }
 
     @Override
-    public void updateLibraryWordsCount(String library, long plusWords) {
-        jdbcTemplate.update(SQL_UPDATE_LIBRARY_WORDS_COUNT, new Object[]{plusWords, library},
+    public void updateLibraryWordsCount(String libraryUrl, long plusWords) {
+        jdbcTemplate.update(SQL_UPDATE_LIBRARY_WORDS_COUNT, new Object[]{plusWords, libraryUrl},
                 new int[]{Types.BIGINT, Types.VARCHAR});
     }
 
@@ -117,8 +130,36 @@ CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
         jdbcTemplate.update(SQL_RECALCULATE_WEIGHT);
     }
 
+    @Override
+    public Boolean isLibraryExists(String libraryUrl) {
+        return jdbcTemplate.queryForObject(SQL_SELECT_LIBRARY_EXISTS, new Object[]{libraryUrl}, new int[]{Types.VARCHAR}, Boolean.class);
+    }
+
+    @Override
+    public void saveLibrary(String libraryUrl) {
+        jdbcTemplate.update(SQL_SAVE_LIBRARY, new Object[]{libraryUrl},
+                new int[]{Types.VARCHAR});
+    }
+
+    @Override
+    public void updateLibraryLastTimeParsed(String libraryUrl, Timestamp lastTimeParsed) {
+        jdbcTemplate.update(SQL_UPDATE_LIBRARY_LAST_PARSED, new Object[]{lastTimeParsed, libraryUrl},
+                new int[]{Types.TIMESTAMP, Types.VARCHAR});
+    }
+
+    @Override
+    public Boolean isArticleExists(String articleUrl) {
+        return jdbcTemplate.queryForObject(SQL_SELECT_ARTICLE_EXISTS, new Object[]{articleUrl}, new int[]{Types.VARCHAR}, Boolean.class);
+    }
+
+    @Override
+    public List<String> getArticlesFromLibrary(String libraryUrl) {
+        return jdbcTemplate.queryForList(SQL_ARTICLES_FROM_LIBRARY, new Object[]{libraryUrl},
+                new int[]{Types.VARCHAR}, String.class);
+    }
+
     public static void main(String[] args) {
         Dao da = new DaoImpl();
-        da.recalculateWeight();
+        System.out.println(da.getArticlesFromLibrary("https://habr.com"));
     }
 }

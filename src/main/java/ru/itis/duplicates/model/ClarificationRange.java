@@ -9,8 +9,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @Data
 @ToString
-public class Word {
-    private String value;
-    private int count;
-    private String libraryUrl;
+public class ClarificationRange {
+    private long from;
+    private long to;
 }

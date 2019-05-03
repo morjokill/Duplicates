@@ -1,12 +1,9 @@
 package ru.itis.duplicates.service;
 
-import ru.itis.duplicates.model.Article;
-import ru.itis.duplicates.model.Word;
-import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
+import ru.itis.duplicates.model.ArticleDuplicate;
 
-import java.io.IOException;
 import java.util.List;
 
 public interface DuplicatesService {
-    void saveArticle(List<String> words, Article article);
+    List<ArticleDuplicate> findDuplicates(List<String> words);
 }
