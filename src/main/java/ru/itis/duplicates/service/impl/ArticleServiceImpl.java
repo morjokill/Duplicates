@@ -8,8 +8,12 @@ import ru.itis.duplicates.model.ArticleWord;
 import ru.itis.duplicates.model.Word;
 import ru.itis.duplicates.service.ArticleService;
 import ru.itis.duplicates.util.Utils;
+import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
 
-import java.util.*;
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 
 //TODO: сделать проверку exists
 @Log
@@ -24,14 +28,15 @@ public class ArticleServiceImpl implements ArticleService {
         this.dao = new DaoImpl();
     }
 
+    //TODO: если пустой - не сейвить
     @Override
     public void saveArticle(List<String> words, Article article) {
         String articleUrl = article.getUrl();
 
         if (!dao.isArticleExists(articleUrl)) {
-            Map<String, Integer> mapOfWordsCountForDocument = calculateWordsCount(words);
+            Map<String, Long> mapOfWordsCountForDocument = Utils.calculateWordsCount(words);
             int wordsCount = words.size();
-            double maxFreq = calculateMaxFrequencyInDocument(mapOfWordsCountForDocument, wordsCount);
+            double maxFreq = Utils.calculateMaxFrequencyInDocument(mapOfWordsCountForDocument, wordsCount);
 
             article.setWordsCount(wordsCount);
             dao.saveArticle(article);
@@ -40,7 +45,7 @@ public class ArticleServiceImpl implements ArticleService {
             List<Word> wordsToSave = new LinkedList<>();
             List<ArticleWord> articleWordsToSave = new LinkedList<>();
             for (String word : mapOfWordsCountForDocument.keySet()) {
-                Integer wordCount = mapOfWordsCountForDocument.get(word);
+                Long wordCount = mapOfWordsCountForDocument.get(word);
                 double freq = Utils.calculateFrequency(wordCount, wordsCount);
                 double tf = Utils.calculateTf(freq, maxFreq);
 
@@ -56,23 +61,9 @@ public class ArticleServiceImpl implements ArticleService {
         }
     }
 
-    private static Map<String, Integer> calculateWordsCount(List<String> words) {
-        Map<String, Integer> mapOfWordsCount = new HashMap<>();
-        for (String word : words) {
-            mapOfWordsCount.merge(word, 1, (oldValue, one) -> oldValue + one);
-        }
-        return mapOfWordsCount;
-    }
-
-    private static double calculateMaxFrequencyInDocument(Map<String, Integer> mapOfWordsCount, int allWordsCount) {
-        if (null != mapOfWordsCount && mapOfWordsCount.size() != 0) {
-            OptionalInt max = mapOfWordsCount.values().stream().mapToInt(Integer::intValue).max();
-            return max.isPresent() ? (double) max.getAsInt() / allWordsCount : 0;
-        }
-        return 0;
-    }
-
-    public static void main(String[] args) {
-        String url = "https://habr.com/ru/top/";
+    public static void main(String[] args) throws IOException, MyStemApplicationException {
+        ArticleService articleService = new ArticleServiceImpl();
+        String helloText = "привет как дела братишка привет";
+        articleService.saveArticle(Utils.parseText(helloText), new Article("wow1", "asd", helloText));
     }
 }

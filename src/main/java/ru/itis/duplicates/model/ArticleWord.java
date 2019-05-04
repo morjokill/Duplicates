@@ -12,14 +12,20 @@ import lombok.ToString;
 public class ArticleWord {
     private String article;
     private String word;
-    private int count;
+    private Long count;
     private double tf;
     private double weight;
 
-    public ArticleWord(String article, String word, int count, double tf) {
+    public ArticleWord(String article, String word, Long count, double tf) {
         this.article = article;
         this.word = word;
         this.count = count;
         this.tf = tf;
+    }
+
+    public ArticleWord(String word, double tf, double weight) {
+        this.word = word;
+        this.tf = tf;
+        this.weight = weight;
     }
 }

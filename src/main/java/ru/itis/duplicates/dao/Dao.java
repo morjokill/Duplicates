@@ -2,10 +2,12 @@ package ru.itis.duplicates.dao;
 
 import ru.itis.duplicates.model.Article;
 import ru.itis.duplicates.model.ArticleWord;
+import ru.itis.duplicates.model.Library;
 import ru.itis.duplicates.model.Word;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Map;
 
 public interface Dao {
     Integer getArticlesCount();
@@ -18,7 +20,7 @@ public interface Dao {
 
     void updateLibraryWordsCount(String libraryUrl, long plusWords);
 
-    void recalculateWeight(String libraryUrl);
+    void recalculateWeight(String libraryUrl, long wordsInLibrary);
 
     Boolean isLibraryExists(String libraryUrl);
 
@@ -31,4 +33,10 @@ public interface Dao {
     List<String> getArticlesFromLibrary(String libraryUrl);
 
     void vacuumWordArticleTable();
+
+    Map<String, Long> mapArticlesWithSignatures(List<String> articles);
+
+    Map<String, Word> getWords(List<String> words, String libraryUrl);
+
+    Library getLibrary(String libraryUrl);
 }

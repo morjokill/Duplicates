@@ -4,6 +4,7 @@ import lombok.extern.java.Log;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.impl.DaoImpl;
 import ru.itis.duplicates.model.ClarificationRange;
+import ru.itis.duplicates.model.Library;
 import ru.itis.duplicates.service.ArticleService;
 import ru.itis.duplicates.service.LibraryService;
 import ru.itis.duplicates.task.LinksFinder;
@@ -59,7 +60,10 @@ public class LibraryServiceImpl implements LibraryService {
             //TODO: РАБОТАЕТ, НО ПИЗДЕЦ ДОЛГО
             //TODO: выполнять только 1 раз надо, а не для каждой статьи,
             // ибо лок и долго, либо же пофискить, чтобы быстрее было
-            dao.recalculateWeight(rootUrl);
+
+            Library libraryFromDb = dao.getLibrary(rootUrl);
+
+            dao.recalculateWeight(rootUrl, libraryFromDb.getWordsCount());
 
         } catch (Exception e) {
             System.out.println("links finder gg: " + e);

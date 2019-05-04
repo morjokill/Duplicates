@@ -1,12 +1,10 @@
 package ru.itis.duplicates.task;
 
 import lombok.extern.java.Log;
-import org.apache.logging.log4j.util.Strings;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import ru.itis.duplicates.app.Application;
 import ru.itis.duplicates.model.Article;
 import ru.itis.duplicates.model.ClarificationRange;
 import ru.itis.duplicates.model.Link;
@@ -14,15 +12,13 @@ import ru.itis.duplicates.model.LinkStatus;
 import ru.itis.duplicates.service.ArticleService;
 import ru.itis.duplicates.service.impl.ArticleServiceImpl;
 import ru.itis.duplicates.util.Utils;
-import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
-import ru.stachek66.nlp.mystem.holding.Request;
-import ru.stachek66.nlp.mystem.model.Info;
-import scala.Option;
-import scala.collection.JavaConversions;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,7 +152,6 @@ public class LinksFinder {
     }
 
     public class SiteParseTask implements Runnable {
-        private static final int MIN_WORDS_SIZE = 3;
         private Link link;
 
         public SiteParseTask(Link link) {
@@ -169,7 +164,7 @@ public class LinksFinder {
                 try {
                     Document document = link.getHtml();
                     String text = getTextFromDocument(document);
-                    List<String> wordsFromSite = parseText(text);
+                    List<String> wordsFromSite = Utils.parseText(text);
 
                     String url = link.getUrl();
                     Article article = new Article(url, rootUrl, text);
@@ -184,52 +179,6 @@ public class LinksFinder {
                     link.setStatus(LinkStatus.FAILED);
                 }
             }
-        }
-
-        private List<String> parseText(String text) throws MyStemApplicationException, IOException {
-            List<String> resultList = new LinkedList<>();
-
-            if (!Strings.isEmpty(text)) {
-                List<String> stemmedWords = stemLine(text);
-                resultList = removeStopWordsFromWordsList(stemmedWords, getStopWords());
-                resultList = removeShortWords(resultList, MIN_WORDS_SIZE);
-
-                return resultList;
-            }
-            return resultList;
-        }
-
-        private List<String> stemLine(String line) throws MyStemApplicationException {
-            List<String> stemmedWords = new LinkedList<>();
-            //TODO: тоже ток 1 раз?
-            final Iterable<Info> result =
-                    JavaConversions.asJavaIterable(
-                            Application.getMyStemAnalyzer()
-                                    .analyze(Request.apply(line))
-                                    .info()
-                                    .toIterable());
-
-            for (final Info info : result) {
-                Option<String> lex = info.lex();
-                if (Objects.nonNull(lex) && lex.isDefined()) {
-                    stemmedWords.add(lex.get());
-                }
-            }
-
-            return stemmedWords;
-        }
-
-        private Set<String> getStopWords() throws IOException {
-            return Application.getStopWords();
-        }
-
-        private List<String> removeStopWordsFromWordsList(List<String> wordsList, Set<String> stopWords) {
-            wordsList.removeAll(stopWords);
-            return wordsList;
-        }
-
-        private List<String> removeShortWords(List<String> words, int minWordsSize) {
-            return words.stream().filter(s -> s.length() > minWordsSize).collect(Collectors.toList());
         }
     }
 
