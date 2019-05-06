@@ -6,6 +6,7 @@ CREATE USER duplicates_user WITH PASSWORD 'duplicates';
 
 GRANT ALL PRIVILEGES ON DATABASE duplicates TO duplicates_user;
 
+DROP TABLE IF EXISTS clarification;
 DROP TABLE IF EXISTS article_word;
 DROP TABLE IF EXISTS article;
 DROP TABLE IF EXISTS word;
@@ -14,8 +15,17 @@ DROP TABLE IF EXISTS library;
 CREATE TABLE library(
   url VARCHAR(255) PRIMARY KEY,
   last_time_parsed TIMESTAMP,
-  words_count BIGINT DEFAULT 0
+  words_count BIGINT DEFAULT 0,
+  before_range VARCHAR(255),
+  after_range VARCHAR(255),
+  last_parsed_in_range BIGINT DEFAULT 0
 );
+
+CREATE TABLE clarification (
+  value VARCHAR(255),
+  library VARCHAR(255) REFERENCES library (url),
+  CONSTRAINT clarification_library_pk PRIMARY KEY (value, library)
+)
 
 CREATE TABLE article(
   url VARCHAR(255) PRIMARY KEY,

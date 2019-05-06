@@ -15,6 +15,13 @@ public class Library {
     private String url;
     private Timestamp lastTimeParsed;
     private long wordsCount;
+    private String beforeRange;
+    private String afterRange;
+    private long lastParsedInRange;
 
-
+    public Library(String url, Timestamp lastTimeParsed, long lastParsedInRange) {
+        this.url = url;
+        this.lastTimeParsed = lastTimeParsed;
+        this.lastParsedInRange = lastParsedInRange;
+    }
 }

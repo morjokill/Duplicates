@@ -7,16 +7,12 @@ import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.config.DaoConfig;
-import ru.itis.duplicates.model.Article;
-import ru.itis.duplicates.model.ArticleWord;
-import ru.itis.duplicates.model.Library;
-import ru.itis.duplicates.model.Word;
+import ru.itis.duplicates.model.*;
 import ru.itis.duplicates.util.Utils;
 
 import javax.sql.DataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -41,9 +37,9 @@ public class DaoImpl implements Dao {
     private static final String SQL_UPDATE_LIBRARY_WORDS_COUNT = "UPDATE library SET words_count = words_count + ?" +
             " WHERE library.url = ?;";
     //TODO: добавить условие library
-    private static final String SQL_SAVE_LIBRARY = "INSERT INTO library (url) " +
-            "VALUES (?);";
-    private static final String SQL_UPDATE_LIBRARY_LAST_PARSED = "UPDATE library SET last_time_parsed = ? " +
+    private static final String SQL_SAVE_LIBRARY = "INSERT INTO library (url, before_range, after_range) " +
+            "VALUES (?, ?, ?);";
+    private static final String SQL_UPDATE_LIBRARY_LAST_PARSED = "UPDATE library SET last_time_parsed = ?, last_parsed_in_range = ? " +
             "WHERE url = ?;";
     private static final String SQL_SELECT_LIBRARY_EXISTS = "SELECT EXISTS(SELECT 1 FROM library WHERE url = ?);";
     private static final String SQL_SELECT_ARTICLE_EXISTS = "SELECT EXISTS(SELECT 1 FROM article WHERE url = ?);";
@@ -57,6 +53,9 @@ public class DaoImpl implements Dao {
     private static final String SQL_MAP_WORDS_WITH_ARTICLES = "SELECT value, sum_count_in_collection," +
             "articles_with_word_count FROM word WHERE word.value IN (:words) AND library = :library;";
     private static final String SQL_SELECT_LIBRARY = "SELECT * FROM library WHERE url = ?;";
+    private static final String SQL_SAVE_CLARIFICATION = "INSERT INTO clarification (value, library) " +
+            " VALUES (?, ?);";
+    private static final String SQL_SELECT_CLARIFICATIONS_FOR_LIBRARY = "SELECT c.value FROM clarification c WHERE library = ?;";
     private final SimpleJdbcCall recalculateWeightCall;
 
     public DaoImpl(DataSource dataSource) {
@@ -161,15 +160,15 @@ CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
     }
 
     @Override
-    public void saveLibrary(String libraryUrl) {
-        jdbcTemplate.update(SQL_SAVE_LIBRARY, new Object[]{libraryUrl},
-                new int[]{Types.VARCHAR});
+    public void saveLibrary(String libraryUrl, String beforeRange, String afterRange) {
+        jdbcTemplate.update(SQL_SAVE_LIBRARY, new Object[]{libraryUrl, beforeRange, afterRange},
+                new int[]{Types.VARCHAR, Types.VARCHAR, Types.VARCHAR});
     }
 
     @Override
-    public void updateLibraryLastTimeParsed(String libraryUrl, Timestamp lastTimeParsed) {
-        jdbcTemplate.update(SQL_UPDATE_LIBRARY_LAST_PARSED, new Object[]{lastTimeParsed, libraryUrl},
-                new int[]{Types.TIMESTAMP, Types.VARCHAR});
+    public void updateLibrary(Library library) {
+        jdbcTemplate.update(SQL_UPDATE_LIBRARY_LAST_PARSED, new Object[]{library.getLastTimeParsed(), library.getLastParsedInRange(), library.getUrl()},
+                new int[]{Types.TIMESTAMP, Types.BIGINT, Types.VARCHAR});
     }
 
     @Override
@@ -213,14 +212,25 @@ CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
         return wordsList.stream().collect(toMap(Word::getValue, e -> e));
     }
 
-    public static void main(String[] args) {
-        Dao dao = new DaoImpl();
-//        System.out.println(dao.getWords(Arrays.asList("привет"), "https://pikabu.ru"));
-        dao.recalculateWeight("https://pikabu.ru", 1107218);
-    }
-
     @Override
     public Library getLibrary(String libraryUrl) {
         return jdbcTemplate.queryForObject(SQL_SELECT_LIBRARY, new Object[]{libraryUrl}, new BeanPropertyRowMapper<>(Library.class));
+    }
+
+    @Override
+    public void saveClarificationForLibrary(Clarification clarification) {
+        jdbcTemplate.update(SQL_SAVE_CLARIFICATION, new Object[]{clarification.getValue(), clarification.getLibrary()},
+                new int[]{Types.VARCHAR, Types.VARCHAR});
+    }
+
+    @Override
+    public List<String> getClarificationsForLibrary(String libraryUrl) {
+        return jdbcTemplate.queryForList(SQL_SELECT_CLARIFICATIONS_FOR_LIBRARY, new Object[]{libraryUrl},
+                new int[]{Types.VARCHAR}, String.class);
+    }
+
+    public static void main(String[] args) {
+        Dao dao = new DaoImpl();
+        System.out.println(dao.getClarificationsForLibrary("https://shikimori.org"));
     }
 }

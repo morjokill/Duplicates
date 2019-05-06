@@ -4,6 +4,7 @@ import lombok.extern.java.Log;
 import org.apache.commons.io.Charsets;
 import org.apache.logging.log4j.util.Strings;
 import ru.itis.duplicates.app.Application;
+import ru.itis.duplicates.model.ArticleUrlPattern;
 import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
 import ru.stachek66.nlp.mystem.holding.Request;
 import ru.stachek66.nlp.mystem.model.Info;
@@ -25,6 +26,7 @@ import java.util.zip.CRC32;
 public class Utils {
     private static Pattern clarificationPattern = Pattern.compile("^([\\/\\\\][-a-zA-Z0-9@:%._+~#=]{2,256}" +
             "[\\/\\\\])|([-a-zA-Z0-9@:%._+~#=]{2,256})$");
+    private static Pattern rangePattern = Pattern.compile("^.*\\/([\\d]+)\\/?.*$");
 
     public static List<String> parseText(String text) throws MyStemApplicationException, IOException {
         int minWordsSize = 3;
@@ -98,10 +100,6 @@ public class Utils {
         return 0;
     }
 
-    public static void main(String[] args) {
-        System.out.println(calculateIdf(2, 3));
-    }
-
     public static double calculatePIdf(double wordSumFreqInCollection, int allArticlesCount) {
         if (allArticlesCount != 0 && wordSumFreqInCollection != 0) {
             return Math.log(1 - Math.exp((-1) * wordSumFreqInCollection / allArticlesCount)) * (-1);
@@ -163,5 +161,57 @@ public class Utils {
             return max.isPresent() ? (double) max.getAsLong() / allWordsCount : 0;
         }
         return 0;
+    }
+
+    public static ArticleUrlPattern getArticleUrlPattern(List<String> exampleUrls) {
+        if (Objects.nonNull(exampleUrls) && exampleUrls.size() >= 2) {
+            int count = 0;
+            String beforeRange = null;
+            String afterRange = null;
+            for (String exampleUrl : exampleUrls) {
+                Matcher rangeMatcher = rangePattern.matcher(exampleUrl);
+                if (rangeMatcher.find()) {
+                    if (null == beforeRange) {
+                        beforeRange = exampleUrl.substring(0, rangeMatcher.start(1));
+                        afterRange = exampleUrl.substring(rangeMatcher.end(1), exampleUrl.length());
+                        count = 1;
+                    } else {
+                        String beforeRangeCandidate = exampleUrl.substring(0, rangeMatcher.start(1));
+                        String afterRangeCandidate = exampleUrl.substring(rangeMatcher.end(1), exampleUrl.length());
+                        if (!beforeRange.equals(beforeRangeCandidate) || !afterRange.equals(afterRangeCandidate)) {
+                            if (beforeRange.equals(beforeRangeCandidate)) {
+                                afterRange = afterRange.length() < afterRangeCandidate.length() ? afterRange : afterRangeCandidate;
+                                afterRange = afterRange.contains("/") ? afterRange : "/";
+                                count++;
+                            } else {
+                                if (beforeRange.length() > beforeRangeCandidate.length()) {
+                                    beforeRange = beforeRangeCandidate;
+                                    count = 1;
+                                }
+                            }
+                        } else {
+                            count++;
+                        }
+                    }
+                }
+            }
+            return count > 1 ? new ArticleUrlPattern(beforeRange, afterRange) : ArticleUrlPattern.getNoPatternInstance();
+        }
+        return ArticleUrlPattern.getNoPatternInstance();
+    }
+
+    public static void main(String[] args) {
+        List<String> exampleUrls = Arrays.asList("https://shikimori.org/animes/37520-dororo",
+                "https://shikimori.org/animes/38003-bungou-stray-dogs-3rd-season",
+                "https://shikimori.org/animes/35790-tate-no-yuusha-no-nariagari",
+                "https://shikimori.org/animes/34134-one-punch-man-2nd-season",
+                "https://shikimori.org/animes/38759-sewayaki-kitsune-no-senko-san",
+                "https://shikimori.org/animes/season/winter_2019",
+                "https://shikimori.org/animes/season/fall_2018",
+                "https://shikimori.org/animes/season/2019",
+                "https://shikimori.org/animes/status/anons",
+                "https://shikimori.org/animes/season/2018",
+                "https://shikimori.org/animes/season/2017");
+        System.out.println(getArticleUrlPattern(exampleUrls));
     }
 }

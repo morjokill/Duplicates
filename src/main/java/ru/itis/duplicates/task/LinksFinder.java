@@ -6,7 +6,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import ru.itis.duplicates.model.Article;
-import ru.itis.duplicates.model.ClarificationRange;
+import ru.itis.duplicates.model.ArticleUrlPattern;
 import ru.itis.duplicates.model.Link;
 import ru.itis.duplicates.model.LinkStatus;
 import ru.itis.duplicates.service.ArticleService;
@@ -22,7 +22,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 //TODO: разнести по классам
@@ -31,7 +33,6 @@ public class LinksFinder {
     private String url;
     private String rootUrl;
     private List<String> clarificationList;
-    private ClarificationRange clarificationRange;
     private Map<String, Link> links;
     private ExecutorService getHtmlService;
     private ExecutorService findLinksService;
@@ -41,11 +42,19 @@ public class LinksFinder {
     private Set<String> allLinks;
     //TODO: четкая тема
     private AtomicInteger handshake = new AtomicInteger(50);
+    private boolean isFinder;
+    private List<String> clarificationLinksFound;
+    private boolean shouldStop;
+    private ArticleUrlPattern articleUrlPattern;
+    private long lastInRange;
+    private AtomicInteger countToStop = new AtomicInteger(20);
+    private AtomicLong lastParsed;
 
     //TODO: 50 вложений, чтобы найти новые?
     //TODO: когда закончит собирать ссылки - все силы на парс
     //TODO: написать оптимизатор, чтобы ссылки не собирал, пока парс не догонит!
-    public LinksFinder(String url, String rootUrl, List<String> clarificationList, List<String> parsedLinks) {
+    public LinksFinder(String url, String rootUrl, List<String> clarificationList,
+                       List<String> parsedLinks, ArticleUrlPattern articleUrlPattern, long lastParsed) {
         this.url = url;
         this.rootUrl = rootUrl;
         this.links = new ConcurrentHashMap<>();
@@ -57,27 +66,86 @@ public class LinksFinder {
         //TODO: DI
         this.articleService = new ArticleServiceImpl();
         this.parsedLinks = ConcurrentHashMap.newKeySet();
-        if (null != parsedLinks) {
+        if (null != parsedLinks && !parsedLinks.isEmpty()) {
             this.parsedLinks.addAll(parsedLinks);
         }
         this.allLinks = ConcurrentHashMap.newKeySet();
-        if (null != parsedLinks) {
+        if (null != parsedLinks && !parsedLinks.isEmpty()) {
             this.allLinks.addAll(parsedLinks);
         }
+        this.articleUrlPattern = articleUrlPattern;
+        this.lastParsed = new AtomicLong(lastParsed);
+    }
+
+    public LinksFinder(String url, String rootUrl, List<String> clarificationList, boolean isFinder) {
+        this.url = url;
+        this.rootUrl = rootUrl;
+        this.links = new ConcurrentHashMap<>();
+        this.clarificationList = clarificationList;
+        //TODO: вынести
+        this.getHtmlService = Executors.newFixedThreadPool(2);
+        this.findLinksService = Executors.newFixedThreadPool(1);
+        this.siteParseService = Executors.newFixedThreadPool(5);
+        //TODO: DI
+        this.articleService = new ArticleServiceImpl();
+        this.parsedLinks = ConcurrentHashMap.newKeySet();
+        this.allLinks = ConcurrentHashMap.newKeySet();
+        this.isFinder = isFinder;
+        this.clarificationLinksFound = new LinkedList<>();
+    }
+
+    public LinksFinder(String url, String rootUrl, List<String> clarificationList,
+                       ArticleUrlPattern articleUrlPattern, long lastParsed) {
+        this.url = url;
+        this.rootUrl = rootUrl;
+        this.links = new ConcurrentHashMap<>();
+        this.clarificationList = clarificationList;
+        //TODO: вынести
+        this.getHtmlService = Executors.newFixedThreadPool(2);
+        this.findLinksService = Executors.newFixedThreadPool(1);
+        this.siteParseService = Executors.newFixedThreadPool(5);
+        //TODO: DI
+        this.articleService = new ArticleServiceImpl();
+        this.parsedLinks = ConcurrentHashMap.newKeySet();
+        this.allLinks = ConcurrentHashMap.newKeySet();
+        this.articleUrlPattern = articleUrlPattern;
+        this.lastParsed = new AtomicLong(lastParsed);
     }
 
     //TODO: когда останавливаться?
     //TODO: при добавлении ссылки нужна проверка на доступность
     //TODO: зачем 2 скачивать страницу? 1 раз скачивать надо и в 2 потока обрабатывать. 2 раза скачивать - хуйня
     public void getAllLinksFromSite() throws InterruptedException {
-        links.put(url, Link.getNewLink(url));
-        allLinks.add(url);
+        if (null == lastParsed || articleUrlPattern == null || !articleUrlPattern.isHasPattern()) {
+            links.put(url, Link.getNewLink(url));
+            allLinks.add(url);
 
-        getHtmlService.execute(new GetHtmlTask(url));
-        while (true) {
-            System.out.println("Parsed: " + parsedLinks.size() + " / " + allLinks.size() + " " + handshake + " " + links.size());
-            Thread.sleep(500);
+            getHtmlService.execute(new GetHtmlTask(url));
+        } else {
+            lastInRange = lastParsed.longValue();
+            addLinksFromRange();
         }
+
+        if (isFinder) {
+            while (clarificationLinksFound.size() < 11 && !shouldStop && countToStop.intValue() > 0) {
+                System.out.println("Links: " + allLinks.size() + " " + handshake + " " + links.size());
+                countToStop.decrementAndGet();
+                Thread.sleep(1000);
+            }
+        } else {
+            while (!shouldStop && countToStop.intValue() > 0) {
+                if (links.size() - parsedLinks.size() < 100 && articleUrlPattern != null && articleUrlPattern.isHasPattern()) {
+                    addLinksFromRange();
+                }
+                System.out.println("Parsed: " + parsedLinks.size() + " / " + allLinks.size() + " " + handshake + " " + links.size());
+                countToStop.decrementAndGet();
+                Thread.sleep(1000);
+            }
+        }
+        getHtmlService.shutdownNow();
+        findLinksService.shutdownNow();
+        siteParseService.shutdown();
+        siteParseService.awaitTermination(5000, TimeUnit.SECONDS);
     }
 
     public class GetHtmlTask implements Runnable {
@@ -104,12 +172,25 @@ public class LinksFinder {
                             link.setHtml(document);
 
                             link.setStatus(LinkStatus.CHECKED);
+                            countToStop.set(20);
 
-                            findLinksService.execute(new FindLinksTask(link));
+                            if (null == articleUrlPattern || !articleUrlPattern.isHasPattern()
+                                    && !findLinksService.isShutdown() && !findLinksService.isTerminated()) {
+                                findLinksService.execute(new FindLinksTask(link));
+                            }
                             if (null != clarificationList && clarificationList.size() != 0) {
-                                for (String clarification : clarificationList) {
-                                    if (link.getUrl().contains(clarification)) {
-                                        siteParseService.execute(new SiteParseTask(link));
+                                if (!isFinder) {
+                                    for (String clarification : clarificationList) {
+                                        if (link.getUrl().contains(clarification) && !siteParseService.isShutdown()
+                                                && !siteParseService.isTerminated()) {
+                                            siteParseService.execute(new SiteParseTask(link));
+                                        }
+                                    }
+                                } else {
+                                    for (String clarification : clarificationList) {
+                                        if (link.getUrl().contains(clarification)) {
+                                            clarificationLinksFound.add(link.getUrl());
+                                        }
                                     }
                                 }
                             }
@@ -143,7 +224,9 @@ public class LinksFinder {
                         }
 
                         links.put(linkFromSite, Link.getNewLink(linkFromSite));
-                        getHtmlService.execute(new GetHtmlTask(linkFromSite));
+                        if (!getHtmlService.isShutdown() && !getHtmlService.isTerminated()) {
+                            getHtmlService.execute(new GetHtmlTask(linkFromSite));
+                        }
                     }
                 }
                 site.setStatus(LinkStatus.COLLECTED);
@@ -171,6 +254,10 @@ public class LinksFinder {
                     articleService.saveArticle(wordsFromSite, article);
 
                     link.setStatus(LinkStatus.PARSED);
+                    if (articleUrlPattern != null && articleUrlPattern.isHasPattern()) {
+                        lastParsed.set(Long.parseLong(link.getUrl().replace(articleUrlPattern.getBeforeRange(), "")
+                                .replace(articleUrlPattern.getAfterRange(), "")));
+                    }
                     //TODO: временно
                     links.remove(url);
                     parsedLinks.add(url);
@@ -234,5 +321,39 @@ public class LinksFinder {
             }
             return false;
         }).collect(Collectors.toList());
+    }
+
+    public void setShouldStop(boolean shouldStop) {
+        this.shouldStop = shouldStop;
+    }
+
+    public List<String> getClarificationLinksFound() {
+        return clarificationLinksFound;
+    }
+
+    private void addLinksFromRange() {
+        String beforeRange = articleUrlPattern.getBeforeRange();
+        String afterRange = articleUrlPattern.getAfterRange();
+        for (int i = 0; i < 100; i++) {
+            lastInRange++;
+            String link = beforeRange + lastInRange + afterRange;
+            allLinks.add(link);
+            links.put(link, Link.getNewLink(link));
+            if (!getHtmlService.isShutdown() && !getHtmlService.isTerminated()) {
+                getHtmlService.execute(new GetHtmlTask(link));
+            }
+        }
+    }
+
+    public AtomicLong getLastParsed() {
+        return lastParsed;
+    }
+
+    @Override
+    public String toString() {
+        return "LinksFinder{" +
+                "parsedLinks=" + parsedLinks.size() +
+                ", allLinks=" + allLinks.size() +
+                '}';
     }
 }

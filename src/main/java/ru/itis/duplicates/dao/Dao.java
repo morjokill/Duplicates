@@ -1,11 +1,7 @@
 package ru.itis.duplicates.dao;
 
-import ru.itis.duplicates.model.Article;
-import ru.itis.duplicates.model.ArticleWord;
-import ru.itis.duplicates.model.Library;
-import ru.itis.duplicates.model.Word;
+import ru.itis.duplicates.model.*;
 
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -24,9 +20,9 @@ public interface Dao {
 
     Boolean isLibraryExists(String libraryUrl);
 
-    void saveLibrary(String libraryUrl);
+    void saveLibrary(String libraryUrl, String beforeRange, String afterRange);
 
-    void updateLibraryLastTimeParsed(String libraryUrl, Timestamp lastTimeParsed);
+    void updateLibrary(Library library);
 
     Boolean isArticleExists(String articleUrl);
 
@@ -39,4 +35,8 @@ public interface Dao {
     Map<String, Word> getWords(List<String> words, String libraryUrl);
 
     Library getLibrary(String libraryUrl);
+
+    void saveClarificationForLibrary(Clarification clarifications);
+
+    List<String> getClarificationsForLibrary(String libraryUrl);
 }
