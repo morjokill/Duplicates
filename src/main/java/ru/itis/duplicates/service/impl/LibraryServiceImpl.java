@@ -53,7 +53,6 @@ public class LibraryServiceImpl implements LibraryService {
         }
     }
 
-
     //TODO: при добавлении не надо жестко смотреть по названию. 1 и тот же ресурс может быть как url так и файлами
     @Override
     public void saveLibrary(LinkFinderInfo info) {
@@ -114,12 +113,8 @@ public class LibraryServiceImpl implements LibraryService {
             info.getFinder().getAllLinksFromSite();
             info.setStatus(LinkFinderStatus.FINISHING);
 
-            //TODO: вынести
             LocalDateTime currentTime = LocalDateTime.now();
 
-            //TODO: РАБОТАЕТ, НО ПИЗДЕЦ ДОЛГО
-            //TODO: выполнять только 1 раз надо, а не для каждой статьи,
-            // ибо лок и долго, либо же пофискить, чтобы быстрее было
             dao.updateLibrary(new Library(rootUrl, Timestamp.valueOf(currentTime), info.getFinder().getLastParsed().longValue()));
 
             Library libraryFromDb = dao.getLibrary(rootUrl);
@@ -127,7 +122,6 @@ public class LibraryServiceImpl implements LibraryService {
             dao.recalculateWeight(rootUrl, libraryFromDb.getWordsCount());
 
             info.setStatus(LinkFinderStatus.FINISHED);
-            linksFindersDispatcher.poll();
 
         } catch (Exception e) {
             System.out.println("links finder gg: " + e);
@@ -136,14 +130,31 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public synchronized Queue<LinkFinderInfo> addInQueue(String library, List<String> clarifications) {
+    public synchronized List<QueueInfo> addInQueue(String library, List<String> clarifications) {
         linksFindersDispatcher.add(LinkFinderInfo.getNewInstance(null, library, clarifications));
-        return linksFindersDispatcher;
+        return getQueueInfo();
     }
 
     @Override
     public Queue<LinkFinderInfo> getQueue() {
         return linksFindersDispatcher;
+    }
+
+    @Override
+    public List<QueueInfo> getQueueInfo() {
+        Queue<LinkFinderInfo> queue = getQueue();
+        List<QueueInfo> queueInfoList = new LinkedList<>();
+        for (LinkFinderInfo linkFinderInfo : queue) {
+            LinksFinder finder = linkFinderInfo.getFinder();
+            if (null != finder) {
+                queueInfoList.add(new QueueInfo(linkFinderInfo.getLibrary(), linkFinderInfo.getClarifications(),
+                        linkFinderInfo.getStatus(), finder.getParsed(), finder.getAllLinks(), finder.getPattern(), finder.getLastParsed()));
+            } else {
+                queueInfoList.add(QueueInfo.getInstanceNoFinder(linkFinderInfo.getLibrary(), linkFinderInfo.getClarifications(),
+                        linkFinderInfo.getStatus()));
+            }
+        }
+        return queueInfoList;
     }
 
     @Override
@@ -176,14 +187,9 @@ public class LibraryServiceImpl implements LibraryService {
         libraryService.addInQueue("https://shikimori.org/", Collections.singletonList("animes"));
         libraryService.addInQueue("https://pikabu.ru/", Collections.singletonList("story"));
         libraryService.addInQueue("https://habr.com/ru/all/", Collections.singletonList("post"));
-        int count = 20;
         while (true) {
-            if (count < 0) {
-                libraryService.removeFromQueue("https://shikimori.org/");
-            }
             System.out.println(libraryService.getQueue());
             Thread.sleep(1000);
-            count--;
         }
     }
 }

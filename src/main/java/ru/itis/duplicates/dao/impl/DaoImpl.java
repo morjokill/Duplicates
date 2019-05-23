@@ -36,7 +36,6 @@ public class DaoImpl implements Dao {
             "VALUES (?, ?, ?, ?);";
     private static final String SQL_UPDATE_LIBRARY_WORDS_COUNT = "UPDATE library SET words_count = words_count + ?" +
             " WHERE library.url = ?;";
-    //TODO: добавить условие library
     private static final String SQL_SAVE_LIBRARY = "INSERT INTO library (url, before_range, after_range) " +
             "VALUES (?, ?, ?);";
     private static final String SQL_UPDATE_LIBRARY_LAST_PARSED = "UPDATE library SET last_time_parsed = ?, last_parsed_in_range = ? " +
@@ -58,7 +57,7 @@ public class DaoImpl implements Dao {
     private static final String SQL_SELECT_CLARIFICATIONS_FOR_LIBRARY = "SELECT c.value FROM clarification c WHERE library = ?;";
     private final SimpleJdbcCall recalculateWeightCall;
 
-    public DaoImpl(DataSource dataSource) {
+    private DaoImpl(DataSource dataSource) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.namedJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
         recalculateWeightCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("recalculate_weight")
@@ -69,14 +68,7 @@ public class DaoImpl implements Dao {
     }
 
     public DaoImpl() {
-        DataSource dataSource = DaoConfig.getDataSource();
-        this.jdbcTemplate = new JdbcTemplate(dataSource);
-        this.namedJdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
-        recalculateWeightCall = new SimpleJdbcCall(jdbcTemplate).withProcedureName("recalculate_weight")
-                .withoutProcedureColumnMetaDataAccess()
-                .declareParameters(new SqlParameter("in_library", Types.VARCHAR),
-                        new SqlParameter("in_count", Types.BIGINT),
-                        new SqlOutParameter("recalculate_weight", Types.INTEGER));
+        this(DaoConfig.getDataSource());
     }
 
     @Override
@@ -135,15 +127,6 @@ public class DaoImpl implements Dao {
                 new int[]{Types.BIGINT, Types.VARCHAR});
     }
 
-    //TODO: сделать через инсерт в темп таблицу
-    /*https://stackoverflow.com/questions/3361291/slow-simple-update-query-on-postgresql-database-with-3-million-rows*/
-    /*https://stackoverflow.com/questions/3100072/postgresql-slow-on-a-large-table-with-arrays-and-lots-of-updates/3100232#3100232*/
-    /*https://web.archive.org/web/20120229084713/http://pgsql.tapoueh.org/site/html/misc/hot.html*/
-    /*Today I've spent many hours with similar issue. I've found a solution: drop all the constraints/indices before
-    the update. No matter whether the column being updated is indexed or not, it seems like psql updates all
-    the indices for all the updated rows. After the update is finished, add the constraints/indices back.*/
-    /*CREATE TEMP TABLE tempTable (id BIGINT NOT NULL, field(s) to be updated,
-CONSTRAINT tempTable_pkey PRIMARY KEY (id));*/
     @Override
     public void recalculateWeight(String libraryUrl, long wordsInLibrary) {
         SqlParameterSource in = new MapSqlParameterSource()

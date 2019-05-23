@@ -16,7 +16,7 @@ public class Application {
     private static Set<String> stopWords;
     private static MyStem myStemAnalyzer;
 
-    //TODO: регать jdbc в начале?
+    //TODO: добавить скедулед вакуум
     public static void main(String[] args) throws IOException {
         initMyStem();
         initStopWords();
@@ -36,7 +36,6 @@ public class Application {
                 .newMyStem("3.0", Option.empty()).get();
     }
 
-    //TODO: только 1 раз, уебок
     public static Set<String> getStopWords() throws IOException {
         if (null == stopWords) {
             initStopWords();

@@ -15,49 +15,50 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-//TODO: сделать проверку exists
 @Log
 public class ArticleServiceImpl implements ArticleService {
     private Dao dao;
 
-    public ArticleServiceImpl(Dao dao) {
+    private ArticleServiceImpl(Dao dao) {
         this.dao = dao;
     }
 
     public ArticleServiceImpl() {
-        this.dao = new DaoImpl();
+        this(new DaoImpl());
     }
 
-    //TODO: если пустой - не сейвить
     @Override
     public void saveArticle(List<String> words, Article article) {
-        String articleUrl = article.getUrl();
+        if (words != null && words.size() != 0) {
+            String articleUrl = article.getUrl();
 
-        if (!dao.isArticleExists(articleUrl)) {
-            Map<String, Long> mapOfWordsCountForDocument = Utils.calculateWordsCount(words);
-            int wordsCount = words.size();
-            double maxFreq = Utils.calculateMaxFrequencyInDocument(mapOfWordsCountForDocument, wordsCount);
+            if (!dao.isArticleExists(articleUrl)) {
+                Map<String, Long> mapOfWordsCountForDocument = Utils.calculateWordsCount(words);
+                int wordsCount = words.size();
+                double maxFreq = Utils.calculateMaxFrequencyInDocument(mapOfWordsCountForDocument, wordsCount);
 
-            article.setWordsCount(wordsCount);
-            dao.saveArticle(article);
-            dao.updateLibraryWordsCount(article.getLibrary(), wordsCount);
+                article.setWordsCount(wordsCount);
+                dao.saveArticle(article);
+                dao.updateLibraryWordsCount(article.getLibrary(), wordsCount);
 
-            List<Word> wordsToSave = new LinkedList<>();
-            List<ArticleWord> articleWordsToSave = new LinkedList<>();
-            for (String word : mapOfWordsCountForDocument.keySet()) {
-                Long wordCount = mapOfWordsCountForDocument.get(word);
-                double freq = Utils.calculateFrequency(wordCount, wordsCount);
-                double tf = Utils.calculateTf(freq, maxFreq);
+                List<Word> wordsToSave = new LinkedList<>();
+                List<ArticleWord> articleWordsToSave = new LinkedList<>();
+                for (String word : mapOfWordsCountForDocument.keySet()) {
+                    Long wordCount = mapOfWordsCountForDocument.get(word);
+                    double freq = Utils.calculateFrequency(wordCount, wordsCount);
+                    double tf = Utils.calculateTf(freq, maxFreq);
 
-                wordsToSave.add(new Word(word, wordCount, article.getLibrary()));
-                articleWordsToSave.add(new ArticleWord(articleUrl, word, wordCount, tf));
+                    wordsToSave.add(new Word(word, wordCount, article.getLibrary()));
+                    articleWordsToSave.add(new ArticleWord(articleUrl, word, wordCount, tf));
+                }
+
+                dao.saveWords(wordsToSave);
+                dao.saveArticleWords(articleWordsToSave);
+            } else {
+                System.out.println("article exists: " + articleUrl);
             }
-
-            dao.saveWords(wordsToSave);
-            dao.saveArticleWords(articleWordsToSave);
         } else {
-            //TODO:
-            System.out.println("article exists: " + articleUrl);
+            System.out.println("Words list is empty for article: " + article);
         }
     }
 

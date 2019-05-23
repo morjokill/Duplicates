@@ -40,7 +40,6 @@ public class LinksFinder {
     private ArticleService articleService;
     private Set<String> parsedLinks;
     private Set<String> allLinks;
-    //TODO: четкая тема
     private AtomicInteger handshake = new AtomicInteger(50);
     private boolean isFinder;
     private List<String> clarificationLinksFound;
@@ -50,7 +49,6 @@ public class LinksFinder {
     private AtomicInteger countToStop = new AtomicInteger(20);
     private AtomicLong lastParsed;
 
-    //TODO: 50 вложений, чтобы найти новые?
     //TODO: когда закончит собирать ссылки - все силы на парс
     //TODO: написать оптимизатор, чтобы ссылки не собирал, пока парс не догонит!
     public LinksFinder(String url, String rootUrl, List<String> clarificationList,
@@ -112,9 +110,6 @@ public class LinksFinder {
         this.lastParsed = new AtomicLong(lastParsed);
     }
 
-    //TODO: когда останавливаться?
-    //TODO: при добавлении ссылки нужна проверка на доступность
-    //TODO: зачем 2 скачивать страницу? 1 раз скачивать надо и в 2 потока обрабатывать. 2 раза скачивать - хуйня
     public void getAllLinksFromSite() throws InterruptedException {
         if (null == lastParsed || articleUrlPattern == null || !articleUrlPattern.isHasPattern()) {
             links.put(url, Link.getNewLink(url));
@@ -155,10 +150,6 @@ public class LinksFinder {
             this.url = url;
         }
 
-        //todo: надо писать в бд со статусом
-        //TODO: как-то сохранять состояние, иначе все если рухнет, то все гг
-        //TODO: ввести уточнение? DA
-        //TODO: можно остановить в любой момент и все добавиться!
         @Override
         public void run() {
             if (links.size() != 0) {
@@ -174,7 +165,7 @@ public class LinksFinder {
                             link.setStatus(LinkStatus.CHECKED);
                             countToStop.set(20);
 
-                            if (null == articleUrlPattern || !articleUrlPattern.isHasPattern()
+                            if ((null == articleUrlPattern || !articleUrlPattern.isHasPattern())
                                     && !findLinksService.isShutdown() && !findLinksService.isTerminated()) {
                                 findLinksService.execute(new FindLinksTask(link));
                             }
@@ -347,6 +338,18 @@ public class LinksFinder {
 
     public AtomicLong getLastParsed() {
         return lastParsed;
+    }
+
+    public long getParsed() {
+        return parsedLinks.size();
+    }
+
+    public long getAllLinks() {
+        return allLinks.size();
+    }
+
+    public ArticleUrlPattern getPattern() {
+        return articleUrlPattern;
     }
 
     @Override

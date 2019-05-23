@@ -44,7 +44,6 @@ public class Utils {
 
     private static List<String> stemLine(String line) throws MyStemApplicationException {
         List<String> stemmedWords = new LinkedList<>();
-        //TODO: тоже ток 1 раз?
         final Iterable<Info> result =
                 JavaConversions.asJavaIterable(
                         Application.getMyStemAnalyzer()
