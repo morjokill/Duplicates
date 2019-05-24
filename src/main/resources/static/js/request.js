@@ -28,6 +28,12 @@ $('#checkDocument').on('click', function () {
     checkDocument();
 });
 
+$('#removeButton').on('click', function () {
+    var $this = $(this);
+    $this.button('loading');
+    removeFromQueue();
+});
+
 var data;
 
 function checkDocument() {
@@ -35,9 +41,11 @@ function checkDocument() {
     $('#checkAlert').empty();
     var text = document.getElementById("documentText").value;
     text = text.replace(/(?:\r\n|\r|\n)/g, '<br>');
+    text = text.replace(/[|&;$%@"<>()+,]/g, '');
     var library = $('#pickedLib').html();
     library = library.replace('<span class="caret"></span>', '');
     library = library.replace(/(?:\r\n|\r|\n)/g, '');
+    library = library.replace(/[|&;$%@"<>()+,]/g, '');
     console.log("PICKED: " + library);
     sendPostRequest('http://localhost:8080/check', '{"text": "' + text + '", "library": "' + library + '"}', 20000).then(function (value) {
         document.getElementById("documentText").value = '';
@@ -97,6 +105,17 @@ function getLibs() {
     return sendGetRequest('http://localhost:8080/libs');
 }
 
+function removeFromQueue() {
+    console.log("REMOVE FROM QUEUE");
+    var uuid = document.getElementById("libraryUuid").value;
+    sendPostRequest('http://localhost:8080/remove', uuid, 5000).then(function (value) {
+        $('#removeButton').button('reset');
+    }).catch(function (reason) {
+        $('#removeButton').button('reset');
+        console.log("Server is not available: " + reason)
+    });
+}
+
 function putInQueue() {
     console.log("PUT IN QUEUE");
     var library = document.getElementById("libraryUrl").value;
@@ -104,6 +123,8 @@ function putInQueue() {
     document.getElementById("libraryUrl").value = '';
     document.getElementById("clarification").value = '';
     sendPostRequest('http://localhost:8080/queue', '{"library": "' + library + '", "clarifications": ["' + clarification + '"]}', 5000).then(function (value) {
+        console.log("PUT IN QUEUE VALUE: " + value);
+        document.getElementById("libraryUuid").value = value;
         $('#indexButton').button('reset');
     }).catch(function (reason) {
         $('#indexButton').button('reset');

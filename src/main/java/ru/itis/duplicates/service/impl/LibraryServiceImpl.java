@@ -55,7 +55,9 @@ public class LibraryServiceImpl implements LibraryService {
                     }
                 } else {
                     LocalDateTime now = LocalDateTime.now();
-                    if (null == lastVacuum || lastVacuum.until(now, ChronoUnit.MINUTES) >= 5) {
+                    if (null == lastVacuum || (lastVacuum.until(now, ChronoUnit.MINUTES) >= 5 &&
+                            (linksFindersDispatcher.isEmpty() || linksFindersDispatcher == null ||
+                                    lastVacuum.until(now, ChronoUnit.MINUTES) >= 60))) {
                         System.out.println("PERFORMING VACUUM");
                         lastVacuum = now;
                         dao.vacuumWordArticleTable();
@@ -132,7 +134,14 @@ public class LibraryServiceImpl implements LibraryService {
 
             Library libraryFromDb = dao.getLibrary(rootUrl);
 
+            LocalDateTime before = LocalDateTime.now();
             dao.recalculateWeight(rootUrl, libraryFromDb.getWordsCount());
+            System.out.println("RECALCULATE TOOK: " + before.until(LocalDateTime.now(), ChronoUnit.MILLIS) + " ms");
+
+            LocalDateTime beforeSign = LocalDateTime.now();
+            List<String> articlesFromLibrary = dao.getArticlesFromLibrary(rootUrl);
+            dao.updateArticlesSignatures(articlesFromLibrary);
+            System.out.println("SIGNATURE TOOK: " + beforeSign.until(LocalDateTime.now(), ChronoUnit.MILLIS) + " ms");
 
             info.setStatus(LinkFinderStatus.FINISHED);
 
@@ -143,21 +152,25 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public synchronized QueueInfo addInQueue(String library, List<String> clarifications) {
+    public synchronized String addInQueue(String library, List<String> clarifications) {
         boolean urlReachable = Utils.isUrlReachable(library, 1000);
+        String uuid;
         if (urlReachable) {
             System.out.println("URL: " + library + " is reachable");
-            LinkFinderInfo newInstance = LinkFinderInfo.getNewInstance(null, library, clarifications);
+            uuid = Utils.getTimeBasedUuid();
+            LinkFinderInfo newInstance = LinkFinderInfo.getNewInstance(null, library, clarifications, uuid);
             boolean isContains = linksFindersDispatcher.contains(newInstance);
             if (!isContains) {
                 linksFindersDispatcher.add(newInstance);
+                return uuid;
             } else {
                 System.out.println("URL: " + library + " is already in queue");
+                return null;
             }
         } else {
             System.out.println("URL: " + library + " is NOT reachable");
         }
-        return getQueueInfo();
+        return null;
     }
 
     @Override
@@ -183,17 +196,18 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public synchronized Queue<LinkFinderInfo> removeFromQueue(String library) {
+    public synchronized boolean removeFromQueue(String uuid) {
         for (LinkFinderInfo linkFinderInfo : linksFindersDispatcher) {
-            if (linkFinderInfo.getLibrary().equals(library)) {
+            if (linkFinderInfo.getUuid().equals(uuid)) {
                 LinksFinder finder = linkFinderInfo.getFinder();
                 if (null != finder) {
                     finder.setShouldStop(true);
                     linkFinderInfo.setStatus(LinkFinderStatus.FINISHING);
+                    return true;
                 }
             }
         }
-        return getQueue();
+        return false;
     }
 
     @Override

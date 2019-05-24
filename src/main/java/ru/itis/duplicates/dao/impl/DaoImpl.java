@@ -14,10 +14,7 @@ import javax.sql.DataSource;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static java.util.stream.Collectors.*;
 
@@ -56,6 +53,8 @@ public class DaoImpl implements Dao {
             " VALUES (?, ?);";
     private static final String SQL_SELECT_CLARIFICATIONS_FOR_LIBRARY = "SELECT c.value FROM clarification c WHERE library = ?;";
     private static final String SQL_SELECT_INDEXED_LIBRARIES = "SELECT * FROM library WHERE last_time_parsed NOTNULL;";
+    private static final String SQL_UPDATE_ARTICLE_SIGNATURE = "UPDATE article SET signature = ? WHERE url = ?;";
+    private static final String SQL_ARTICLES_WITH_SIGNS_FROM_LIBRARY = "SELECT url, signature FROM article WHERE library = ?;";
     private final SimpleJdbcCall recalculateWeightCall;
 
     private DaoImpl(DataSource dataSource) {
@@ -172,7 +171,7 @@ public class DaoImpl implements Dao {
     }
 
     @Override
-    public Map<String, Long> mapArticlesWithSignatures(List<String> articles) {
+    public void updateArticlesSignatures(List<String> articles) {
         MapSqlParameterSource params = new MapSqlParameterSource();
         params.addValue("articles", articles);
 
@@ -183,7 +182,23 @@ public class DaoImpl implements Dao {
         for (String s : collect.keySet()) {
             articleSignatureMap.put(s, Utils.calculateCRC32(collect.get(s)));
         }
-        return articleSignatureMap;
+        Set<Map.Entry<String, Long>> entries = articleSignatureMap.entrySet();
+        Iterator<Map.Entry<String, Long>> iterator = entries.iterator();
+        jdbcTemplate.batchUpdate(SQL_UPDATE_ARTICLE_SIGNATURE, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                if (iterator.hasNext()) {
+                    Map.Entry<String, Long> next = iterator.next();
+                    ps.setLong(1, next.getValue());
+                    ps.setString(2, next.getKey());
+                }
+            }
+
+            @Override
+            public int getBatchSize() {
+                return entries.size();
+            }
+        });
     }
 
     @Override
@@ -218,8 +233,9 @@ public class DaoImpl implements Dao {
         return jdbcTemplate.query(SQL_SELECT_INDEXED_LIBRARIES, new BeanPropertyRowMapper<>(Library.class));
     }
 
-    public static void main(String[] args) {
-        Dao dao = new DaoImpl();
-        System.out.println(dao.getClarificationsForLibrary("https://shikimori.org"));
+    @Override
+    public List<Article> getArticlesWithSignatures(String libraryUrl) {
+        return jdbcTemplate.query(SQL_ARTICLES_WITH_SIGNS_FROM_LIBRARY, new Object[]{libraryUrl},
+                new int[]{Types.VARCHAR}, new BeanPropertyRowMapper<>(Article.class));
     }
 }

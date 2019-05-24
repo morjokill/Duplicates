@@ -1,5 +1,6 @@
 package ru.itis.duplicates.util;
 
+import com.datastax.driver.core.utils.UUIDs;
 import lombok.extern.java.Log;
 import org.apache.commons.io.Charsets;
 import org.apache.logging.log4j.util.Strings;
@@ -212,5 +213,9 @@ public class Utils {
         } catch (IOException e) {
             return false;
         }
+    }
+
+    public static String getTimeBasedUuid() {
+        return UUIDs.timeBased().toString();
     }
 }

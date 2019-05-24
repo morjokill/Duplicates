@@ -35,8 +35,14 @@ public class SinglePageController {
 
     @PostMapping("/queue")
     @ResponseBody
-    public QueueInfo putInQueue(@RequestBody PutInQueue putInQueue) {
+    public String putInQueue(@RequestBody PutInQueue putInQueue) {
         return libraryService.addInQueue(putInQueue.getLibrary(), putInQueue.getClarifications());
+    }
+
+    @PostMapping("/remove")
+    @ResponseBody
+    public boolean deleteFromQueue(@RequestBody String uuid) {
+        return libraryService.removeFromQueue(uuid);
     }
 
     @GetMapping("/libs")

@@ -8,9 +8,7 @@ import ru.itis.duplicates.model.ArticleWord;
 import ru.itis.duplicates.model.Word;
 import ru.itis.duplicates.service.ArticleService;
 import ru.itis.duplicates.util.Utils;
-import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
 
-import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -60,11 +58,5 @@ public class ArticleServiceImpl implements ArticleService {
         } else {
             System.out.println("Words list is empty for article: " + article);
         }
-    }
-
-    public static void main(String[] args) throws IOException, MyStemApplicationException {
-        ArticleService articleService = new ArticleServiceImpl();
-        String helloText = "привет как дела братишка привет";
-        articleService.saveArticle(Utils.parseText(helloText), new Article("wow1", "asd", helloText));
     }
 }

@@ -30,7 +30,7 @@ public interface Dao {
 
     void vacuumWordArticleTable();
 
-    Map<String, Long> mapArticlesWithSignatures(List<String> articles);
+    void updateArticlesSignatures(List<String> articles);
 
     Map<String, Word> getWords(List<String> words, String libraryUrl);
 
@@ -41,4 +41,6 @@ public interface Dao {
     List<String> getClarificationsForLibrary(String libraryUrl);
 
     List<Library> getIndexedLibraries();
+
+    List<Article> getArticlesWithSignatures(String libraryUrl);
 }

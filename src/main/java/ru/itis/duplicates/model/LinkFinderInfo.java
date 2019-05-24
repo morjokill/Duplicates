@@ -16,9 +16,10 @@ public class LinkFinderInfo {
     private String library;
     private List<String> clarifications;
     private LinkFinderStatus status;
+    private String uuid;
 
-    public static LinkFinderInfo getNewInstance(LinksFinder finder, String library, List<String> clarifications) {
-        return new LinkFinderInfo(finder, library, clarifications, LinkFinderStatus.NEW);
+    public static LinkFinderInfo getNewInstance(LinksFinder finder, String library, List<String> clarifications, String uuid) {
+        return new LinkFinderInfo(finder, library, clarifications, LinkFinderStatus.NEW, uuid);
     }
 
     @Override

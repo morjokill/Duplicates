@@ -31,7 +31,8 @@ CREATE TABLE article(
   url VARCHAR(255) PRIMARY KEY,
   library VARCHAR(255) REFERENCES library (url),
   text TEXT,
-  words_count BIGINT
+  words_count BIGINT,
+  signature BIGINT
 );
 
 CREATE TABLE word(

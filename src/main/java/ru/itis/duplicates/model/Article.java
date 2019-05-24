@@ -14,6 +14,7 @@ public class Article {
     private String library;
     private String text;
     private long wordsCount;
+    private long signature;
 
     public Article(String url, String library, String text) {
         this.url = url;
