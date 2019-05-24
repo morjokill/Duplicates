@@ -11,7 +11,11 @@ import ru.itis.duplicates.util.Utils;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.time.temporal.ChronoUnit;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Log
@@ -37,6 +41,7 @@ public class LibraryServiceImpl implements LibraryService {
     public class QueueDispatcher implements Runnable {
         @Override
         public void run() {
+            LocalDateTime lastVacuum = null;
             while (true) {
                 if (linksFindersDispatcher != null && !linksFindersDispatcher.isEmpty()) {
                     LinkFinderInfo head = linksFindersDispatcher.peek();
@@ -47,6 +52,14 @@ public class LibraryServiceImpl implements LibraryService {
                         if (head.getStatus() == LinkFinderStatus.FINISHED) {
                             linksFindersDispatcher.poll();
                         }
+                    }
+                } else {
+                    LocalDateTime now = LocalDateTime.now();
+                    if (null == lastVacuum || lastVacuum.until(now, ChronoUnit.MINUTES) >= 5) {
+                        System.out.println("PERFORMING VACUUM");
+                        lastVacuum = now;
+                        dao.vacuumWordArticleTable();
+                        System.out.println("VACUUM DONE");
                     }
                 }
             }
@@ -197,16 +210,5 @@ public class LibraryServiceImpl implements LibraryService {
             }
         }
         return parsedClarifications;
-    }
-
-    public static void main(String[] args) throws InterruptedException {
-        LibraryService libraryService = new LibraryServiceImpl();
-        libraryService.addInQueue("https://shikimori.org/", Collections.singletonList("animes"));
-        libraryService.addInQueue("https://pikabu.ru/", Collections.singletonList("story"));
-        libraryService.addInQueue("https://habr.com/ru/all/", Collections.singletonList("post"));
-        while (true) {
-            System.out.println(libraryService.getQueue());
-            Thread.sleep(1000);
-        }
     }
 }

@@ -213,19 +213,4 @@ public class Utils {
             return false;
         }
     }
-
-    public static void main(String[] args) {
-        List<String> exampleUrls = Arrays.asList("https://shikimori.org/animes/37520-dororo",
-                "https://shikimori.org/animes/38003-bungou-stray-dogs-3rd-season",
-                "https://shikimori.org/animes/35790-tate-no-yuusha-no-nariagari",
-                "https://shikimori.org/animes/34134-one-punch-man-2nd-season",
-                "https://shikimori.org/animes/38759-sewayaki-kitsune-no-senko-san",
-                "https://shikimori.org/animes/season/winter_2019",
-                "https://shikimori.org/animes/season/fall_2018",
-                "https://shikimori.org/animes/season/2019",
-                "https://shikimori.org/animes/status/anons",
-                "https://shikimori.org/animes/season/2018",
-                "https://shikimori.org/animes/season/2017");
-        System.out.println(getArticleUrlPattern(exampleUrls));
-    }
 }

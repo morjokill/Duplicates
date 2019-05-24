@@ -15,10 +15,7 @@ import ru.itis.duplicates.util.Utils;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -132,7 +129,6 @@ public class LinksFinder {
                 if (links.size() - parsedLinks.size() < 100 && articleUrlPattern != null && articleUrlPattern.isHasPattern()) {
                     addLinksFromRange();
                 }
-                System.out.println("Parsed: " + parsedLinks.size() + " / " + allLinks.size() + " " + handshake + " " + links.size());
                 countToStop.decrementAndGet();
                 Thread.sleep(1000);
             }
@@ -234,7 +230,8 @@ public class LinksFinder {
 
         @Override
         public void run() {
-            if (link.getStatus() == LinkStatus.CHECKED && !parsedLinks.contains(link.getUrl())) {
+            if ((link.getStatus() == LinkStatus.CHECKED || link.getStatus() == LinkStatus.COLLECTED)
+                    && !parsedLinks.contains(link.getUrl())) {
                 try {
                     Document document = link.getHtml();
                     String text = getTextFromDocument(document);
@@ -270,7 +267,15 @@ public class LinksFinder {
 
     //TODO:validation
     private static String getTextFromDocument(Document document) {
-        return document.body().text();
+        Element body = document.body();
+        String removeTags = "a,button,img,input,menu,nav,textarea,time,video,form";
+        body.select(removeTags).remove();
+        Elements allElements = body.getAllElements();
+        List<Element> collect = allElements.stream().filter(element -> element.hasText() && element.text().length() < 1000).collect(Collectors.toList());
+        for (Element element : collect) {
+            element.remove();
+        }
+        return body.text();
     }
 
     //TODO: может лучше сет?
