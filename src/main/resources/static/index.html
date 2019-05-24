@@ -11,7 +11,7 @@
 </nav>
 
 <div class="d-flex flex-wrap bg-gray" style="min-height: 100vh;">
-    <aside class="team-left-column col-12 col-md-4 col-lg-3 bg-white border-right border-bottom hide-md hide-sm">
+    <aside class="team-left-column col-md-4">
         <table class="table table-hover">
             <thead>
             <tr>
@@ -22,11 +22,11 @@
             <tbody>
             <tr>
                 <td>Size</td>
-                <td id="queueSize">23</td>
+                <td id="queueSize">0</td>
             </tr>
             </tbody>
         </table>
-        <table class="table table-hover" id="queueHead">
+        <table class="table table-hover" id="queueHead" style="display: none">
             <thead>
             <tr>
                 <th scope="col">Queue head</th>
@@ -36,19 +36,19 @@
             <tbody>
             <tr>
                 <td>Library</td>
-                <td id="currentLib">https://habr.com/ru/</td>
+                <td id="currentLib">Undefined</td>
             </tr>
             <tr>
                 <td>Parsed documents</td>
-                <td id="parsedDocs">15</td>
+                <td id="parsedDocs">0</td>
             </tr>
             <tr>
                 <td>All found documents</td>
-                <td id="allDocs">120</td>
+                <td id="allDocs">0</td>
             </tr>
             <tr>
                 <td>Status</td>
-                <td id="status">PROCESSING</td>
+                <td id="status">Undefined</td>
             </tr>
             </tbody>
         </table>
@@ -68,7 +68,7 @@
         </form>
     </aside>
 
-    <aside class="team-left-column col-12 col-md-3 col-lg-3 pr-5 mt-5 hide-lg hide-md hide-sm border-bottom">
+    <aside class="team-left-column col-md-4">
         <table class="table table-hover">
             <thead>
             <tr>
@@ -79,10 +79,8 @@
             <tr>
                 <td>
                     <div class="dropdown">
-                        <button href="#" class="dropdown-toggle btn btn-secondary" data-toggle="dropdown" id="pickedLib">
-                            Library to check into
-                            <span class="caret"></span>
-                        </button>
+                        <button href="#" class="dropdown-toggle btn btn-secondary" data-toggle="dropdown"
+                                id="pickedLib">Library to check into<span class="caret"></span></button>
                         <ul class="dropdown-menu" id="indexedLibs">
                             <li><a href="#">https://habr.com/ru/</a></li>
                             <li><a href="#">https://cyberleninka.ru/</a></li>
@@ -91,17 +89,55 @@
                 </td>
             </tr>
             <tr>
+                <table class="table table-hover" id="pickedLibrary" style="display: none">
+                    <thead>
+                    <tr>
+                        <th scope="col">Picked library</th>
+                        <th scope="col"></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>URL</td>
+                        <td id="pickedUrl">Undefined</td>
+                    </tr>
+                    <tr>
+                        <td>Last time parsed</td>
+                        <td id="pickedParsedDate">Undefined</td>
+                    </tr>
+                    <tr>
+                        <td>Words count</td>
+                        <td id="pickedWordsCount">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </tr>
+            <tr>
                 <td>
                     <form>
                         <div class="form-group">
                             <label for="documentText">Document text</label>
                             <textarea class="form-control rounded-0" id="documentText" rows="10"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" id="checkDocument">Check
-                            <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                            <span class="sr-only">Checking...</span>
+                        <button type="submit" class="btn btn-primary" id="checkDocument"
+                                data-loading-text="<i class='lds-dual-ring'></i> Checking">Check
                         </button>
                     </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </aside>
+    <aside class="team-left-column col-md-4">
+        <table class="table table-hover">
+            <thead>
+            <tr>
+                <th scope="col">Results</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td id="checkAlert">
                 </td>
             </tr>
             </tbody>

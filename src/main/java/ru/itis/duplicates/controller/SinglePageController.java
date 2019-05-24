@@ -41,7 +41,7 @@ public class SinglePageController {
 
     @GetMapping("/libs")
     @ResponseBody
-    public List<IndexedLibrary> getIndexedLibraries() {
+    public List<Library> getIndexedLibraries() {
         return libraryService.getIndexedLibraries();
     }
 

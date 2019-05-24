@@ -40,5 +40,5 @@ public interface Dao {
 
     List<String> getClarificationsForLibrary(String libraryUrl);
 
-    List<String> getIndexedLibraries();
+    List<Library> getIndexedLibraries();
 }

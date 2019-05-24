@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import ru.itis.duplicates.task.LinksFinder;
 
 import java.util.List;
+import java.util.Objects;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,5 +19,18 @@ public class LinkFinderInfo {
 
     public static LinkFinderInfo getNewInstance(LinksFinder finder, String library, List<String> clarifications) {
         return new LinkFinderInfo(finder, library, clarifications, LinkFinderStatus.NEW);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LinkFinderInfo that = (LinkFinderInfo) o;
+        return Objects.equals(library, that.library);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), library);
     }
 }

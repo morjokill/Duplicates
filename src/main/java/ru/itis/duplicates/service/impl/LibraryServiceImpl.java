@@ -131,7 +131,19 @@ public class LibraryServiceImpl implements LibraryService {
 
     @Override
     public synchronized QueueInfo addInQueue(String library, List<String> clarifications) {
-        linksFindersDispatcher.add(LinkFinderInfo.getNewInstance(null, library, clarifications));
+        boolean urlReachable = Utils.isUrlReachable(library, 1000);
+        if (urlReachable) {
+            System.out.println("URL: " + library + " is reachable");
+            LinkFinderInfo newInstance = LinkFinderInfo.getNewInstance(null, library, clarifications);
+            boolean isContains = linksFindersDispatcher.contains(newInstance);
+            if (!isContains) {
+                linksFindersDispatcher.add(newInstance);
+            } else {
+                System.out.println("URL: " + library + " is already in queue");
+            }
+        } else {
+            System.out.println("URL: " + library + " is NOT reachable");
+        }
         return getQueueInfo();
     }
 
@@ -172,13 +184,8 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public List<IndexedLibrary> getIndexedLibraries() {
-        List<IndexedLibrary> indexedLibrariesRes = new LinkedList<>();
-        List<String> indexedLibraries = dao.getIndexedLibraries();
-        for (String indexedLibrary : indexedLibraries) {
-            indexedLibrariesRes.add(new IndexedLibrary(indexedLibrary));
-        }
-        return indexedLibrariesRes;
+    public List<Library> getIndexedLibraries() {
+        return dao.getIndexedLibraries();
     }
 
     private static List<String> parseClarifications(List<String> clarifications) {

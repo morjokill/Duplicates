@@ -44,6 +44,11 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         Library library = dao.getLibrary(libraryUrl);
         if (null != library) {
             List<String> articlesFromLibrary = dao.getArticlesFromLibrary(libraryUrl);
+
+            if (null == articlesFromLibrary || articlesFromLibrary.isEmpty()) {
+                return Collections.emptyList();
+            }
+
             Map<String, Long> articlesWithSignatures = dao.mapArticlesWithSignatures(articlesFromLibrary);
 
             List<ArticleWord> wordsFromDocument = new LinkedList<>();

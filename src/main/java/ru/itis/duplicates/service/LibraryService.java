@@ -1,6 +1,6 @@
 package ru.itis.duplicates.service;
 
-import ru.itis.duplicates.model.IndexedLibrary;
+import ru.itis.duplicates.model.Library;
 import ru.itis.duplicates.model.LinkFinderInfo;
 import ru.itis.duplicates.model.QueueInfo;
 
@@ -18,5 +18,5 @@ public interface LibraryService {
 
     Queue<LinkFinderInfo> removeFromQueue(String library);
 
-    List<IndexedLibrary> getIndexedLibraries();
+    List<Library> getIndexedLibraries();
 }

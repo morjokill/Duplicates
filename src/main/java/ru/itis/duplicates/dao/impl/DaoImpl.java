@@ -55,7 +55,7 @@ public class DaoImpl implements Dao {
     private static final String SQL_SAVE_CLARIFICATION = "INSERT INTO clarification (value, library) " +
             " VALUES (?, ?);";
     private static final String SQL_SELECT_CLARIFICATIONS_FOR_LIBRARY = "SELECT c.value FROM clarification c WHERE library = ?;";
-    private static final String SQL_SELECT_INDEXED_LIBRARIS = "SELECT url FROM library WHERE last_time_parsed NOTNULL;";
+    private static final String SQL_SELECT_INDEXED_LIBRARIES = "SELECT * FROM library WHERE last_time_parsed NOTNULL;";
     private final SimpleJdbcCall recalculateWeightCall;
 
     private DaoImpl(DataSource dataSource) {
@@ -214,8 +214,8 @@ public class DaoImpl implements Dao {
     }
 
     @Override
-    public List<String> getIndexedLibraries() {
-        return jdbcTemplate.queryForList(SQL_SELECT_INDEXED_LIBRARIS, String.class);
+    public List<Library> getIndexedLibraries() {
+        return jdbcTemplate.query(SQL_SELECT_INDEXED_LIBRARIES, new BeanPropertyRowMapper<>(Library.class));
     }
 
     public static void main(String[] args) {

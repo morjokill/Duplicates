@@ -14,7 +14,9 @@ import scala.collection.JavaConversions;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
+import java.net.Socket;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -197,6 +199,19 @@ public class Utils {
             return count > 1 ? new ArticleUrlPattern(beforeRange, afterRange) : ArticleUrlPattern.getNoPatternInstance();
         }
         return ArticleUrlPattern.getNoPatternInstance();
+    }
+
+    public static boolean isUrlReachable(String url, int timeout) {
+        try (Socket socket = new Socket()) {
+            URL urlInstance = new URL(url);
+            String host = urlInstance.getHost();
+            int port = urlInstance.getPort() == -1 ? 80 : urlInstance.getPort();
+
+            socket.connect(new InetSocketAddress(host, port), timeout);
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     public static void main(String[] args) {
