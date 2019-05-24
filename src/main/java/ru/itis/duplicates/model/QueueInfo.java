@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @Data
 @ToString
 public class QueueInfo {
+    private int queueSize;
     private String library;
     private List<String> clarifications;
     private LinkFinderStatus status;
@@ -21,7 +22,11 @@ public class QueueInfo {
     private ArticleUrlPattern articleUrlPattern;
     private AtomicLong lastParsed;
 
-    public static QueueInfo getInstanceNoFinder(String library, List<String> clarifications, LinkFinderStatus status) {
-        return new QueueInfo(library, clarifications, status, 0, 0, null, null);
+    public static QueueInfo getInstanceNoFinder(int queueSize, String library, List<String> clarifications, LinkFinderStatus status) {
+        return new QueueInfo(queueSize, library, clarifications, status, 0, 0, null, null);
+    }
+
+    public static QueueInfo getEmpty() {
+        return new QueueInfo(0, null, null, null, 0, 0, null, null);
     }
 }

@@ -130,7 +130,7 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public synchronized List<QueueInfo> addInQueue(String library, List<String> clarifications) {
+    public synchronized QueueInfo addInQueue(String library, List<String> clarifications) {
         linksFindersDispatcher.add(LinkFinderInfo.getNewInstance(null, library, clarifications));
         return getQueueInfo();
     }
@@ -141,20 +141,20 @@ public class LibraryServiceImpl implements LibraryService {
     }
 
     @Override
-    public List<QueueInfo> getQueueInfo() {
+    public QueueInfo getQueueInfo() {
         Queue<LinkFinderInfo> queue = getQueue();
-        List<QueueInfo> queueInfoList = new LinkedList<>();
-        for (LinkFinderInfo linkFinderInfo : queue) {
-            LinksFinder finder = linkFinderInfo.getFinder();
+        LinkFinderInfo head = queue.peek();
+        if (null != head) {
+            LinksFinder finder = head.getFinder();
             if (null != finder) {
-                queueInfoList.add(new QueueInfo(linkFinderInfo.getLibrary(), linkFinderInfo.getClarifications(),
-                        linkFinderInfo.getStatus(), finder.getParsed(), finder.getAllLinks(), finder.getPattern(), finder.getLastParsed()));
+                return new QueueInfo(queue.size(), head.getLibrary(), head.getClarifications(),
+                        head.getStatus(), finder.getParsed(), finder.getAllLinks(), finder.getPattern(), finder.getLastParsed());
             } else {
-                queueInfoList.add(QueueInfo.getInstanceNoFinder(linkFinderInfo.getLibrary(), linkFinderInfo.getClarifications(),
-                        linkFinderInfo.getStatus()));
+                return QueueInfo.getInstanceNoFinder(queue.size(), head.getLibrary(), head.getClarifications(),
+                        head.getStatus());
             }
         }
-        return queueInfoList;
+        return QueueInfo.getEmpty();
     }
 
     @Override
@@ -169,6 +169,16 @@ public class LibraryServiceImpl implements LibraryService {
             }
         }
         return getQueue();
+    }
+
+    @Override
+    public List<IndexedLibrary> getIndexedLibraries() {
+        List<IndexedLibrary> indexedLibrariesRes = new LinkedList<>();
+        List<String> indexedLibraries = dao.getIndexedLibraries();
+        for (String indexedLibrary : indexedLibraries) {
+            indexedLibrariesRes.add(new IndexedLibrary(indexedLibrary));
+        }
+        return indexedLibrariesRes;
     }
 
     private static List<String> parseClarifications(List<String> clarifications) {

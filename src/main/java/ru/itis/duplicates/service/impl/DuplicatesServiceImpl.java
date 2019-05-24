@@ -3,6 +3,7 @@ package ru.itis.duplicates.service.impl;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.impl.DaoImpl;
 import ru.itis.duplicates.model.ArticleWord;
+import ru.itis.duplicates.model.Duplicate;
 import ru.itis.duplicates.model.Library;
 import ru.itis.duplicates.model.Word;
 import ru.itis.duplicates.service.DuplicatesService;
@@ -10,10 +11,7 @@ import ru.itis.duplicates.util.Utils;
 import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
 
 import java.io.IOException;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class DuplicatesServiceImpl implements DuplicatesService {
@@ -23,15 +21,25 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         this.dao = new DaoImpl();
     }
 
-
     public DuplicatesServiceImpl(Dao dao) {
         this.dao = dao;
     }
 
     //TODO: сделать 2 потока в бд, Future<>
     @Override
-    public List<String> findDuplicates(List<String> words, String libraryUrl) {
-        List<String> doubles = new LinkedList<>();
+    public List<Duplicate> findDuplicates(String text, String libraryUrl) {
+        List<String> words;
+        try {
+            words = Utils.parseText(text);
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+
+        if (words.size() == 0) {
+            return Collections.emptyList();
+        }
+
+        List<Duplicate> doubles = new LinkedList<>();
 
         Library library = dao.getLibrary(libraryUrl);
         if (null != library) {
@@ -88,7 +96,7 @@ public class DuplicatesServiceImpl implements DuplicatesService {
             for (String articleUrl : articlesWithSignatures.keySet()) {
                 if (Long.compare(articleSignature, articlesWithSignatures.get(articleUrl)) == 0) {
                     System.out.println("Duplicates with: " + articleUrl);
-                    doubles.add(articleUrl);
+                    doubles.add(new Duplicate(articleUrl));
                 }
             }
         }
@@ -102,6 +110,6 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         Dao dao = new DaoImpl();
         List<String> articlesFromLibrary = dao.getArticlesFromLibrary("https://pikabu.ru");
         System.out.println(articlesFromLibrary);
-        duplicatesService.findDuplicates(Utils.parseText(s), "https://pikabu.ru");
+        duplicatesService.findDuplicates(s, "https://pikabu.ru");
     }
 }

@@ -22,11 +22,11 @@
             <tbody>
             <tr>
                 <td>Size</td>
-                <td>23</td>
+                <td id="queueSize">23</td>
             </tr>
             </tbody>
         </table>
-        <table class="table table-hover">
+        <table class="table table-hover" id="queueHead">
             <thead>
             <tr>
                 <th scope="col">Queue head</th>
@@ -36,19 +36,19 @@
             <tbody>
             <tr>
                 <td>Library</td>
-                <td>https://habr.com/ru/</td>
+                <td id="currentLib">https://habr.com/ru/</td>
             </tr>
             <tr>
                 <td>Parsed documents</td>
-                <td>15</td>
+                <td id="parsedDocs">15</td>
             </tr>
             <tr>
                 <td>All found documents</td>
-                <td>120</td>
+                <td id="allDocs">120</td>
             </tr>
             <tr>
                 <td>Status</td>
-                <td>PROCESSING</td>
+                <td id="status">PROCESSING</td>
             </tr>
             </tbody>
         </table>
@@ -64,7 +64,7 @@
                        placeholder="Enter clarification">
                 <small id="clarificationHelp" class="form-text text-muted">Example: post</small>
             </div>
-            <button type="submit" class="btn btn-primary">Index</button>
+            <button type="submit" class="btn btn-primary" id="indexButton">Index</button>
         </form>
     </aside>
 
@@ -79,13 +79,13 @@
             <tr>
                 <td>
                     <div class="dropdown">
-                        <button id="drop1" href="#" class="dropdown-toggle btn btn-secondary" data-toggle="dropdown">
+                        <button href="#" class="dropdown-toggle btn btn-secondary" data-toggle="dropdown" id="pickedLib">
                             Library to check into
                             <span class="caret"></span>
                         </button>
-                        <ul class="dropdown-menu">
-                            <li><a href="#">Текст подпункта</a></li>
-                            <li><a href="#">Текст подпункта</a></li>
+                        <ul class="dropdown-menu" id="indexedLibs">
+                            <li><a href="#">https://habr.com/ru/</a></li>
+                            <li><a href="#">https://cyberleninka.ru/</a></li>
                         </ul>
                     </div>
                 </td>
@@ -97,7 +97,7 @@
                             <label for="documentText">Document text</label>
                             <textarea class="form-control rounded-0" id="documentText" rows="10"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Check
+                        <button type="submit" class="btn btn-primary" id="checkDocument">Check
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                             <span class="sr-only">Checking...</span>
                         </button>

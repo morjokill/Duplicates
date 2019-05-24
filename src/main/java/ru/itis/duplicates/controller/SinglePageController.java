@@ -1,21 +1,24 @@
 package ru.itis.duplicates.controller;
 
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import ru.itis.duplicates.model.PutInQueue;
-import ru.itis.duplicates.model.QueueInfo;
+import ru.itis.duplicates.model.*;
+import ru.itis.duplicates.service.DuplicatesService;
 import ru.itis.duplicates.service.LibraryService;
+import ru.itis.duplicates.service.impl.DuplicatesServiceImpl;
 import ru.itis.duplicates.service.impl.LibraryServiceImpl;
 
 import java.util.List;
 
-@Controller
+@CrossOrigin
+@RestController
 @RequestMapping("/")
 public class SinglePageController {
     private LibraryService libraryService;
+    private DuplicatesService duplicatesService;
 
     public SinglePageController() {
         this.libraryService = new LibraryServiceImpl();
+        this.duplicatesService = new DuplicatesServiceImpl();
     }
 
     @GetMapping("/hi")
@@ -26,13 +29,25 @@ public class SinglePageController {
 
     @GetMapping("/queue")
     @ResponseBody
-    public List<QueueInfo> getQueue() {
+    public QueueInfo getQueue() {
         return libraryService.getQueueInfo();
     }
 
     @PostMapping("/queue")
     @ResponseBody
-    public List<QueueInfo> putInQueue(@RequestBody PutInQueue putInQueue) {
+    public QueueInfo putInQueue(@RequestBody PutInQueue putInQueue) {
         return libraryService.addInQueue(putInQueue.getLibrary(), putInQueue.getClarifications());
+    }
+
+    @GetMapping("/libs")
+    @ResponseBody
+    public List<IndexedLibrary> getIndexedLibraries() {
+        return libraryService.getIndexedLibraries();
+    }
+
+    @PostMapping("/check")
+    @ResponseBody
+    public List<Duplicate> checkDocument(@RequestBody CheckInstance checkInstance) {
+        return duplicatesService.findDuplicates(checkInstance.getText(), checkInstance.getLibrary());
     }
 }
