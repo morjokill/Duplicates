@@ -98,11 +98,7 @@ public class DuplicatesServiceImpl implements DuplicatesService {
             for (Article article : articlesFromLibrary) {
                 if (Long.compare(articleSignature, article.getSignature()) == 0) {
                     System.out.println("Duplicates with: " + article);
-                    String url = article.getUrl();
-                    String articleText = dao.getArticleText(url);
-                    double linesSimilarity = Utils.getLinesSimilarity(text, articleText);
-                    System.out.println("Similarity: " + linesSimilarity);
-                    doubles.add(new Duplicate(url + ". Similarity: " + String.format("%.2f", linesSimilarity)));
+                    doubles.add(new Duplicate(article.getUrl()));
                 }
             }
         }
