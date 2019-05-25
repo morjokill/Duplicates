@@ -43,4 +43,6 @@ public interface Dao {
     List<Library> getIndexedLibraries();
 
     List<Article> getArticlesWithSignatures(String libraryUrl);
+
+    String getArticleText(String articleUrl);
 }

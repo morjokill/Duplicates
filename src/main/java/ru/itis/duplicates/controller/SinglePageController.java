@@ -1,6 +1,7 @@
 package ru.itis.duplicates.controller;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import ru.itis.duplicates.model.*;
 import ru.itis.duplicates.service.DuplicatesService;
 import ru.itis.duplicates.service.LibraryService;
@@ -55,5 +56,12 @@ public class SinglePageController {
     @ResponseBody
     public List<Duplicate> checkDocument(@RequestBody CheckInstance checkInstance) {
         return duplicatesService.findDuplicates(checkInstance.getText(), checkInstance.getLibrary());
+    }
+
+    @PostMapping(value = "/checkFile")
+    @ResponseBody
+    public List<Duplicate> checkFile(@RequestParam("file") MultipartFile file,
+                                     @RequestParam("library") String library) {
+        return duplicatesService.findDuplicates(file, library);
     }
 }

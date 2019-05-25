@@ -124,6 +124,19 @@
                 <td>
                     <form>
                         <div class="form-group">
+                            <label for="documentFile">Pick document</label>
+                            <input type="file" class="form-control-file" id="documentFile">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="checkFile"
+                                data-loading-text="<i class='lds-dual-ring'></i> Checking">Check
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <form>
+                        <div class="form-group">
                             <label for="documentText">Document text</label>
                             <textarea class="form-control rounded-0" id="documentText" rows="10"></textarea>
                         </div>

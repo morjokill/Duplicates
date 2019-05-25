@@ -1,5 +1,6 @@
 package ru.itis.duplicates.service.impl;
 
+import org.springframework.web.multipart.MultipartFile;
 import ru.itis.duplicates.dao.Dao;
 import ru.itis.duplicates.dao.impl.DaoImpl;
 import ru.itis.duplicates.model.*;
@@ -97,11 +98,36 @@ public class DuplicatesServiceImpl implements DuplicatesService {
             for (Article article : articlesFromLibrary) {
                 if (Long.compare(articleSignature, article.getSignature()) == 0) {
                     System.out.println("Duplicates with: " + article);
-                    doubles.add(new Duplicate(article.getUrl()));
+                    String url = article.getUrl();
+                    String articleText = dao.getArticleText(url);
+                    double linesSimilarity = Utils.getLinesSimilarity(text, articleText);
+                    System.out.println("Similarity: " + linesSimilarity);
+                    doubles.add(new Duplicate(url + ". Similarity: " + String.format("%.2f", linesSimilarity)));
                 }
             }
         }
         System.out.println("FIND DOUBLES TOOK: " + before.until(LocalDateTime.now(), ChronoUnit.MILLIS) + " ms");
         return doubles;
+    }
+
+    @Override
+    public List<Duplicate> findDuplicates(MultipartFile file, String libraryUrl) {
+        if (null != file && !file.isEmpty()) {
+            String originalFilename = file.getOriginalFilename();
+
+            Extension extension = Extension.getExtension(originalFilename);
+            if (extension == null) {
+                return Collections.emptyList();
+            }
+
+            try {
+                String text = extension.getText(file.getInputStream());
+                return findDuplicates(text, libraryUrl);
+            } catch (Exception e) {
+                System.out.println("Could not parse file: " + originalFilename + " " + e.getMessage());
+                return Collections.emptyList();
+            }
+        }
+        return Collections.emptyList();
     }
 }

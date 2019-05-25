@@ -55,6 +55,7 @@ public class DaoImpl implements Dao {
     private static final String SQL_SELECT_INDEXED_LIBRARIES = "SELECT * FROM library WHERE last_time_parsed NOTNULL;";
     private static final String SQL_UPDATE_ARTICLE_SIGNATURE = "UPDATE article SET signature = ? WHERE url = ?;";
     private static final String SQL_ARTICLES_WITH_SIGNS_FROM_LIBRARY = "SELECT url, signature FROM article WHERE library = ?;";
+    private static final String SQL_SELECT_ARTICLE_TEXT = "SELECT text FROM article WHERE url = ?;";
     private final SimpleJdbcCall recalculateWeightCall;
 
     private DaoImpl(DataSource dataSource) {
@@ -237,5 +238,10 @@ public class DaoImpl implements Dao {
     public List<Article> getArticlesWithSignatures(String libraryUrl) {
         return jdbcTemplate.query(SQL_ARTICLES_WITH_SIGNS_FROM_LIBRARY, new Object[]{libraryUrl},
                 new int[]{Types.VARCHAR}, new BeanPropertyRowMapper<>(Article.class));
+    }
+
+    @Override
+    public String getArticleText(String articleUrl) {
+        return jdbcTemplate.queryForObject(SQL_SELECT_ARTICLE_TEXT, new Object[]{articleUrl}, String.class);
     }
 }

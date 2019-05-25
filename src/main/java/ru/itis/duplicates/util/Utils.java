@@ -3,7 +3,14 @@ package ru.itis.duplicates.util;
 import com.datastax.driver.core.utils.UUIDs;
 import lombok.extern.java.Log;
 import org.apache.commons.io.Charsets;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.util.Strings;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.pdfbox.text.PDFTextStripperByArea;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import ru.itis.duplicates.app.Application;
 import ru.itis.duplicates.model.ArticleUrlPattern;
 import ru.stachek66.nlp.mystem.holding.MyStemApplicationException;
@@ -12,9 +19,7 @@ import ru.stachek66.nlp.mystem.model.Info;
 import scala.Option;
 import scala.collection.JavaConversions;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
@@ -30,8 +35,11 @@ public class Utils {
     private static Pattern clarificationPattern = Pattern.compile("^([\\/\\\\][-a-zA-Z0-9@:%._+~#=]{2,256}" +
             "[\\/\\\\])|([-a-zA-Z0-9@:%._+~#=]{2,256})$");
     private static Pattern rangePattern = Pattern.compile("^.*\\/([\\d]+)\\/?.*$");
+    private static Pattern notCyrillicPattern = Pattern.compile("(?!([а-яА-ЯёЁ\\s]+)).");
 
     public static List<String> parseText(String text) throws MyStemApplicationException, IOException {
+        Matcher matcher = notCyrillicPattern.matcher(text);
+        text = matcher.replaceAll("");
         int minWordsSize = 3;
         List<String> resultList = new LinkedList<>();
 
@@ -217,5 +225,62 @@ public class Utils {
 
     public static String getTimeBasedUuid() {
         return UUIDs.timeBased().toString();
+    }
+
+    public static String getFileExtension(String fileName) {
+        if (!Strings.isEmpty(fileName)) {
+            return FilenameUtils.getExtension(fileName);
+        }
+        return "";
+    }
+
+    public static String getStringFromIS(InputStream inputStream) throws IOException {
+        StringWriter writer = new StringWriter();
+        IOUtils.copy(inputStream, writer, Charsets.UTF_8);
+        return writer.toString();
+    }
+
+    public static String getStringFromPdfIS(InputStream inputStream) throws IOException {
+        try (PDDocument document = PDDocument.load(inputStream)) {
+            if (!document.isEncrypted()) {
+                PDFTextStripperByArea stripper = new PDFTextStripperByArea();
+                stripper.setSortByPosition(true);
+
+                PDFTextStripper tStripper = new PDFTextStripper();
+                return tStripper.getText(document);
+            } else {
+                throw new IOException("Document is encrypted");
+            }
+        }
+    }
+
+    public static String getStringFromDocIS(InputStream inputStream) throws IOException {
+        XWPFDocument document = new XWPFDocument(inputStream);
+        List<XWPFParagraph> paragraphs = document.getParagraphs();
+
+        StringBuilder sb = new StringBuilder();
+        for (XWPFParagraph para : paragraphs) {
+            sb.append(para.getText());
+        }
+        return sb.toString();
+    }
+
+    public static double getLinesSimilarity(String firstLine, String secondLine) {
+        int[] Di_1 = new int[secondLine.length() + 1];
+        int[] Di = new int[secondLine.length() + 1];
+
+        for (int j = 0; j <= secondLine.length(); j++) {
+            Di[j] = j;
+        }
+        for (int i = 1; i <= firstLine.length(); i++) {
+            System.arraycopy(Di, 0, Di_1, 0, Di_1.length);
+
+            Di[0] = i;
+            for (int j = 1; j <= secondLine.length(); j++) {
+                int cost = (firstLine.charAt(i - 1) != secondLine.charAt(j - 1)) ? 1 : 0;
+                Di[j] = Math.min(Math.min(Di_1[j] + 1, Di[j - 1] + 1), Di_1[j - 1] + cost);
+            }
+        }
+        return (1 - (double) Di[Di.length - 1] / firstLine.length()) * 100;
     }
 }
