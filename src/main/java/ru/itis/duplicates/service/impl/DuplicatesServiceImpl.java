@@ -23,7 +23,6 @@ public class DuplicatesServiceImpl implements DuplicatesService {
         this.dao = dao;
     }
 
-    //TODO: сделать 2 потока в бд, Future<>
     @Override
     public List<Duplicate> findDuplicates(String text, String libraryUrl) {
         LocalDateTime before = LocalDateTime.now();

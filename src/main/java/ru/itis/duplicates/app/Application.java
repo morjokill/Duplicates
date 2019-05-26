@@ -16,7 +16,6 @@ public class Application {
     private static Set<String> stopWords;
     private static MyStem myStemAnalyzer;
 
-    //TODO: добавить скедулед вакуум
     public static void main(String[] args) throws IOException {
         initMyStem();
         initStopWords();

@@ -68,7 +68,6 @@ public class LibraryServiceImpl implements LibraryService {
         }
     }
 
-    //TODO: при добавлении не надо жестко смотреть по названию. 1 и тот же ресурс может быть как url так и файлами
     @Override
     public void saveLibrary(LinkFinderInfo info) {
         try {
@@ -148,7 +147,6 @@ public class LibraryServiceImpl implements LibraryService {
         } catch (Exception e) {
             System.out.println("links finder gg: " + e);
         }
-        //TODO: сделать норм return
     }
 
     @Override

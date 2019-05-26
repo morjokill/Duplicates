@@ -15,7 +15,10 @@ import ru.itis.duplicates.util.Utils;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -46,19 +49,15 @@ public class LinksFinder {
     private AtomicInteger countToStop = new AtomicInteger(20);
     private AtomicLong lastParsed;
 
-    //TODO: когда закончит собирать ссылки - все силы на парс
-    //TODO: написать оптимизатор, чтобы ссылки не собирал, пока парс не догонит!
     public LinksFinder(String url, String rootUrl, List<String> clarificationList,
                        List<String> parsedLinks, ArticleUrlPattern articleUrlPattern, long lastParsed) {
         this.url = url;
         this.rootUrl = rootUrl;
         this.links = new ConcurrentHashMap<>();
         this.clarificationList = clarificationList;
-        //TODO: вынести
         this.getHtmlService = Executors.newFixedThreadPool(2);
         this.findLinksService = Executors.newFixedThreadPool(1);
         this.siteParseService = Executors.newFixedThreadPool(5);
-        //TODO: DI
         this.articleService = new ArticleServiceImpl();
         this.parsedLinks = ConcurrentHashMap.newKeySet();
         if (null != parsedLinks && !parsedLinks.isEmpty()) {
@@ -77,11 +76,9 @@ public class LinksFinder {
         this.rootUrl = rootUrl;
         this.links = new ConcurrentHashMap<>();
         this.clarificationList = clarificationList;
-        //TODO: вынести
         this.getHtmlService = Executors.newFixedThreadPool(2);
         this.findLinksService = Executors.newFixedThreadPool(1);
         this.siteParseService = Executors.newFixedThreadPool(5);
-        //TODO: DI
         this.articleService = new ArticleServiceImpl();
         this.parsedLinks = ConcurrentHashMap.newKeySet();
         this.allLinks = ConcurrentHashMap.newKeySet();
@@ -95,11 +92,9 @@ public class LinksFinder {
         this.rootUrl = rootUrl;
         this.links = new ConcurrentHashMap<>();
         this.clarificationList = clarificationList;
-        //TODO: вынести
         this.getHtmlService = Executors.newFixedThreadPool(2);
         this.findLinksService = Executors.newFixedThreadPool(1);
         this.siteParseService = Executors.newFixedThreadPool(5);
-        //TODO: DI
         this.articleService = new ArticleServiceImpl();
         this.parsedLinks = ConcurrentHashMap.newKeySet();
         this.allLinks = ConcurrentHashMap.newKeySet();
@@ -246,11 +241,9 @@ public class LinksFinder {
                         lastParsed.set(Long.parseLong(link.getUrl().replace(articleUrlPattern.getBeforeRange(), "")
                                 .replace(articleUrlPattern.getAfterRange(), "")));
                     }
-                    //TODO: временно
                     links.remove(url);
                     parsedLinks.add(url);
                 } catch (Exception e) {
-                    //TODO: log?
                     link.setStatus(LinkStatus.FAILED);
                 }
             }
@@ -265,7 +258,6 @@ public class LinksFinder {
         return links;
     }
 
-    //TODO:validation
     private static String getTextFromDocument(Document document) {
         Element body = document.body();
         String removeTags = "a,button,img,input,menu,nav,textarea,time,video,form";
